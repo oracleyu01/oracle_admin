@@ -6,7 +6,7 @@
 | 1.3    | shared pool이 뭔지 알아야해요.                                                 |                  |
 | 1.4    | 데이터베이스 버퍼 캐쉬(database buffer cache) 가 뭔지 알아야해요.                     |                  |
 | 1.5    | 리두로그 버퍼(redo log buffer) 가 뭔지 알아야해요.                                   |                  |
-| 1.6    | PGA 메모리 영역의 역할을 알아야해요.                                              |                  |
+| 1.6    | PGA 메모리 영역이 왜 필요한지 알아야해요.                                             |                  |
 | 1.7    | DBWn 프로세서의 역할을 알아야해요.                                              |                  |
 | 1.8    | LGWR (log writer)의 역할을 알아야해요.                                           |                  |
 | 1.9   | CKPT (checkpoint process)의 역할을 알아야해요.                                    |                  |
