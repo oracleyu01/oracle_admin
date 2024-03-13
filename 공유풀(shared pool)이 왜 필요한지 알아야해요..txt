@@ -19,24 +19,21 @@
      where ename='SCOTT';
 
    1. 파싱(parsing) :   - 문법 검사(syntex check) : SQL이 문법적으로 문제가 없는지
-                            - 의미 검사(symentic check) : emp 테이블이 db 에 있는지
+                        - 의미 검사(symentic check) : emp 테이블이 db 에 있는지
 
-     파싱 결과물 3가지 ?    1.  SQL문장      2. 실행계획      3. Parse tree
-                                                                             (실행가능한 코드)
+     파싱 결과물 3가지 ?    1.  SQL문장      2. 실행계획      3. Parse tree (실행가능한 코드)
 
    위의 3가지 결과물을 shared pool 에 library cache 에 올립니다. 
 
    왜 올리는가? 다음번에 똑같은 문장이 들어오면 파싱과정을 생략하려고
 
-  2. 실행(execute) : 옵티마이져가 생성해준 실행계획으로 실행
-                         데이터를 검색하는 작업입니다.
+  2. 실행(execute) : 옵티마이져가 생성해준 실행계획으로 실행 데이터를 검색하는 작업입니다.
 
 
   3. 패치(fetch)  :   서버 프로세서 ----------------> 유져 프로세서 
-                                               결과 데이터
+                                       결과 데이터
 
- 실습 주제:  똑같은 sql이 들어와야 파싱과정을 생략할 수 있다고 했는데
-                그럼 똑같은 sql이 무엇인가 ? 
+ 실습 주제:  똑같은 sql이 들어와야 파싱과정을 생략할 수 있다고 했는데 그럼 똑같은 sql이 무엇인가 ? 
 
   1. 대소문자 구분: 
     예: SELECT ENAME,SAL FROM EMP WHERE EMPNO=7788;
