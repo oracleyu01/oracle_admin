@@ -7,7 +7,6 @@
    from  emp
    where ename='SCOTT';  
 
-
 버퍼 캐쉬가 필요한 이유? 
 
 한번 검색해서 DATA FILE 에서 찾은 데이터를 BUFFER CACHE 에 올리고 다음번에 또 찾을때 BUFFER CACHE에서 검색하려고 필요합니다.
