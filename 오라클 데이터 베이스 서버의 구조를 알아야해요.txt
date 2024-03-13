@@ -1,0 +1,64 @@
+
+▣1.1 오라클 데이터 베이스 서버의 구조를 알아야해요
+
+▩ 1. 오라클 데이터 베이스의 구조 
+
+   1. two  tier 환경
+
+        클라이언트 ---------------------> 서버(db)
+
+          노트북                                회사의 서버실의 서버 
+   
+   2. tree tier 환경 
+
+       클라이언트 --------->  미들 티어 ------------> 서버(db)
+                                    (middle tier)
+                                         ↓
+         클라이언트가 접속할 때 접속이 원할하게 진행되게 접속로드를 
+          분할하는 역활.    예:  턱시도, 티베로
+ 
+   예: 수강신청, 열차 예매, SQLD 시험 신청 
+
+
+▣ 2. 오라클 데이터 베이스 서버 구조 : 개요
+
+ 클라이언트 ------------------> 서버
+
+  User process                 server process
+
+ select  ename, sal            1. 오라클 메모리에서 data 를 검색
+  from emp                     2. 없으면 database 에서 data 를 검색
+  order by sal desc;           3. 오라클 메모리에 결과 데이터를 올립니다.
+                                    4. 정렬 작업은 개별 메모리인 pga 에서 정렬합니다.
+                                    5. 결과를 user process 에게 전달
+
+오라클 데이터 베이스의 구조는 ?
+
+     1. 데이터 베이스
+     2. 메모리
+
+ 오라클 메모리를 따로 두는 이유는 ?  메모리에 데이터를 올려놓고 데이터 검색을
+                                                 빠르게 하기 위해서 입니다. 
+
+ 예:    사전 ------------------------------ 단어장
+      (database)                             ( 오라클 메모리)
+
+실습:
+
+1.  sys 유져로 접속합니다. 
+
+ $ sqlplus "/as sysdba"
+
+2. 오라클 db 의 이름을 확인합니다.
+
+SQL> select  name  from  v$database; 
+
+3. 오라클 메모리(instance)의 이름을 확인합니다. 
+
+SQL> select  instance_name from v$instance; 
+
+문제1.  오라클 메모리가 잘 열려있는지 확인하시오 !
+
+ select   instance_name, status
+   from  v$instance; 
+
