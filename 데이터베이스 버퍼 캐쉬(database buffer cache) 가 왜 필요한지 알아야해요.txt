@@ -1,16 +1,16 @@
 
 ▩ 데이터베이스 버퍼 캐쉬(database buffer cache) 가 왜 필요한지 알아야해요.
 
+다음과 같이 SQL문을 실행했다고 해볼께요.
 
  select   sal
    from  emp
    where ename='SCOTT';  
 
 
-버퍼 캐쉬가 필요한 이유? 한번 검색해서 DATA FILE 에서 찾은
-                                 데이터를 BUFFER CACHE 에 올리고
-                                 다음번에 또 찾을때 BUFFER CACHE
-                                 에서 검색하려고 필요합니다.
+버퍼 캐쉬가 필요한 이유? 
+
+한번 검색해서 DATA FILE 에서 찾은 데이터를 BUFFER CACHE 에 올리고 다음번에 또 찾을때 BUFFER CACHE에서 검색하려고 필요합니다.
 
 
 실습1.  DB BLOCK 사이즈가 몇인지 확인하시오!
@@ -31,14 +31,11 @@ SQL> show  parameter  db_block_size
 
 dba가 이 내용을 알고 있어야하는 이유 ?
 
-답: 우리 회사에 자주 엑세스하는 작은 테이블은
-     테이블의 cache 속성을 nocache 가 아니라 cache로 
-     해주면 좋은 성능을 보입니다. 
+답: 자주 엑세스하는 작은 테이블은 테이블의 cache 속성을 nocache 가 아니라 cache로 해주면 좋은 성능을 보입니다. 
 
  테이블의 cache 속성이 2가지 ?
 
-  1. nocache :   index scan 을 하면  MRU 로 블럭을 올리고
-                    full table scan 을 하게 되면 LRU 쪽에 블럭을 올리는 속성
+  1. nocache :   index scan 을 하면  MRU 로 블럭을 올리고 full table scan 을 하게 되면 LRU 쪽에 블럭을 올리는 속성
 
   2. cache  :    index scan 을 하든 full table scan 을 하든 모두 MRU 로 올리는 속성 
 
@@ -53,7 +50,8 @@ SQL>  select  table_name,  cache
 둘다 nocache 입니다
 
 그런데 만약 emp 테이블이 우리회사에서 정말 자주 엑세스하는 중요한 테이블이다라면?
- cache 테이블로 변경해줘야합니다.
+
+답: cache 테이블로 변경해줘야합니다.
 
 SQL> alter  table  emp  cache; 
 
@@ -81,8 +79,7 @@ SQL>  select  table_name,  cache
              from   user_tables
              where  table_name in ('EMP', 'DEPT');
 
-문제3. emp 테이블을 cache 속성으로 바꾸지 말고 쿼리 레벨에서 cache 속성이 되게
-          하시오 !
+문제3. emp 테이블을 cache 속성으로 바꾸지 말고 쿼리 레벨에서 cache 속성이 되게 하시오 !
 
 SQL> select  /*+  cache  */  sal
          from  emp
