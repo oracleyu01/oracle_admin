@@ -1,18 +1,18 @@
 | 번호   | 제목                                                          | 스크립트 |
 |--------|-------------------------------------------------------------|--------------------|
 |        |**1.오라클 구조**                                            |                    |
-| 1.1    | 오라클 데이터 베이스 서버 구조                                      |                  |
-| 1.2    | 오라클 데이터베이스 메모리 구조                                      |                  |
-| 1.3    | shared pool                                                 |                  |
-| 1.4    | 데이터베이스 버퍼 캐쉬(database buffer cache)                         |                  |
-| 1.5    | 리두로그 버퍼(redo log buffer)                                     |                  |
-| 1.6    | PGA 메모리 영역                                               |                  |
-| 1.7    | DBWn 프로세서                                                |                  |
-| 1.8    | LGWR (log writer)                                           |                  |
-| 1.9   | CKPT (checkpoint process)                                    |                  |
-| 1.10   | SMON(System Monitor process)                                 |                  |
-| 1.11   | PMON 프로세서 (Process monitor)                              |                  |
-| 1.12   | ARCn (Archive process)                                       |                  |
+| 1.1    | 오라클 데이터 베이스 서버 구조를 알아야해요.                                     |                  |
+| 1.2    | 오라클 데이터베이스 메모리 구조를 알아야해요.                                      |                  |
+| 1.3    | shared pool이 뭔지 알아야해요.                                                 |                  |
+| 1.4    | 데이터베이스 버퍼 캐쉬(database buffer cache) 가 뭔지 알아야해요.                     |                  |
+| 1.5    | 리두로그 버퍼(redo log buffer) 가 뭔지 알아야해요.                                   |                  |
+| 1.6    | PGA 메모리 영역의 역할을 알아야해요.                                              |                  |
+| 1.7    | DBWn 프로세서의 역할을 알아야해요.                                              |                  |
+| 1.8    | LGWR (log writer)의 역할을 알아야해요.                                           |                  |
+| 1.9   | CKPT (checkpoint process)의 역할을 알아야해요.                                    |                  |
+| 1.10   | SMON(System Monitor process)의 역할을 알아야해요.                  |                  |
+| 1.11   | PMON 프로세서 (Process monitor)의 역할을 알아야해요.              |                  |
+| 1.12   | ARCn (Archive process)의 역할을 알아야해요.                                       |                  |
 |   | **2.저장 영역 구조**                                                |                  |
 | 2.1   | 데이터 베이스 저장 영역 구조                                          |                  |
 | 2.2   | 논리적 및 물리적 데이터 베이스 구조                                      |                  |
