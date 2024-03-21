@@ -23,7 +23,7 @@
 
 ### 1. **오라클 구조**
 
-- 1.1 **오라클 데이터 베이스 서버 구조를 알아야해요.**: [📄 [노트](https://github.com/oracleyu01/oracle_admin/blob/main/%EC%98%A4%EB%9D%BC%ED%81%B4%20%EB%8D%B0%EC%9D%B4%ED%84%B0%20%EB%B2%A0%EC%9D%B4%EC%8A%A4%20%EC%84%9C%EB%B2%84%EC%9D%98%20%EA%B5%AC%EC%A1%B0%EB%A5%BC%20%EC%95%8C%EC%95%84%EC%95%BC%ED%95%B4%EC%9A%94.txt)]
+- 1.1 **오라클 데이터 베이스 서버 구조를 알아야해요.**: [📄 [노트](https://github.com/oracleyu01/oracle_admin/blob/main/%EC%98%A4%EB%9D%BC%ED%81%B4%20%EB%8D%B0%EC%9D%B4%ED%84%B0%20%EB%B2%A0%EC%9D%B4%EC%8A%A4%20%EC%84%9C%EB%B2%84%EC%9D%98%20%EA%B5%AC%EC%A1%B0%EB%A5%BC%20%EC%95%8C%EC%95%84%EC%95%BC%ED%95%B4%EC%9A%94.txt)] 📊 [그림설명](https://cafe.daum.net/oracleoracle/SoMW/1)
 
 - 1.2 **오라클 데이터베이스 메모리 구조를 알아야해요.**: [📄 [노트](https://github.com/oracleyu01/oracle_admin/blob/main/%EC%98%A4%EB%9D%BC%ED%81%B4%20%EB%8D%B0%EC%9D%B4%ED%84%B0%EB%B2%A0%EC%9D%B4%EC%8A%A4%20%EB%A9%94%EB%AA%A8%EB%A6%AC%20%EA%B5%AC%EC%A1%B0%EB%A5%BC%20%EC%95%8C%EC%95%84%EC%95%BC%ED%95%B4%EC%9A%94..txt)]
 
