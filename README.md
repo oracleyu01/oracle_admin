@@ -191,3 +191,24 @@
 
 - 11.1 **db reorg 작업하기**: [📄 [노트]()]
 
+
+### ⚡ 오라클을 처음부터 배우시는 분들을 위해 SQL과 SQL튜닝 강의를 소개합니다.
+
+
+- **SQL 강의(국비지원)**:  🖥️ [영상](https://www.e-itwill.com/course/course_view.jsp?id=121&ch=course&cid=&s_style=gallery&scid=&s_field=&s_keyword=)  
+
+- **SQL 강의**:  🖥️ [영상](https://easyupclass.e-itwill.com/course/course_view.jsp?id=22&cid=123&ch=course)  
+
+- **SQL튜닝 강의**:  🖥️ [영상](https://easyupclass.e-itwill.com/course/course_view.jsp?id=69&cid=155)
+
+- **SQL자동화 강의**:  🖥️ [영상](https://easyupclass.e-itwill.com/course/course_view.jsp?id=447&cid=28)  
+
+&nbsp;
+
+
+---
+
+감사합니다!
+
+[코딩 대한민국](https://codingkorea.example.com)
+
