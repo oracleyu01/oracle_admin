@@ -1,6 +1,6 @@
 # 오라클 관리 수업 가이드
 
-<img src="https://github.com/oracleyu01/oracle_admin/blob/main/%EC%98%A4%EB%9D%BC%ED%81%B4%20%EA%B4%80%EB%A6%AC%20%EC%88%98%EC%97%85-001.png" width="600" height="400">
+<img src="https://github.com/oracleyu01/oracle_admin/blob/main/%EC%98%A4%EB%9D%BC%ED%81%B4%20%EA%B4%80%EB%A6%AC%20%EC%88%98%EC%97%85-001.png" width="300" height="300">
 
 안녕하세요,  여러분! 🌟
 
