@@ -1,0 +1,77 @@
+▣ 8.8 롤(role)을 사용하게 되면 편하게 권한 부여를 할 수 있습니다
+
+ p8-21
+
+ - role 이란 ?  권한의 집합 
+
+ - role 을 사용하면 권한을 쉽게 부여할 수 있습니다.
+
+ - role 을 직접 만들수도 있고 오라클에서 미리 만들어 놓은 role을 사용할 수도 있습니다.
+
+■ 실습. 오라클에서 미리 만들어 놓은 role 사용방법
+
+1.  만약 유져를 생성했는 어떠한 시스템 권한을 줘야할 지 잘 모르겠다면
+    다음과 같이 하면 됩니다.
+
+create   user  martin3
+  indentified  by  tiger;
+
+grant  connect, resource   to  martin3;  
+
+2.  connect 라는 role 에는 어떤 시스템 권한이 있는지 확인합니다.
+
+select  *
+   from  role_sys_privs
+   where  role='CONNECT'; 
+
+3. resource 라는 role 에는 어떤 시스템 권한이 있는지 확인합니다.
+   sys 유져에서 확인합니다. 
+
+select  *
+ from role_sys_privs
+  where  role='RESOURCE';
+
+점심시간 문제.  지금 만든 martin3 유져가 scott 의 emp 테이블과 dept 테이블을
+                     select, update, insert, delete 할 수 있도록 권한을 주는데
+                    나중에 권한을 취소할때 martin3 가 남에게 줬던 권한까지 다 취소될수
+                    있겠금 권한을 부여하시오 !
+
+ martin3 에서  @obj_priv.sql 을 수행한 결과를 검사받고 식사하러 가세요 ~~
+
+문제1.  martin4 라는 유져를 생성하고 martin4 라는 유져에게  dba 롤을 부여하고
+          martin4 유져가  어떤 권한을 받았는지 확인하시오 !
+
+ create  user  martin4
+  identified  by  tiger;
+
+ grant   dba  to  martin4;
+
+ connect martin4/tiger
+
+ @system_priv
+
+ dba 라는 롤 하나만 받으면 모든 시스템 권한을 다 수행할 수 있게 되고
+ 데이터 베이스에 있는 모든 테이블들을 다 조회할 수 있게 됩니다.
+
+문제2. (현장사례)  내가 지금 dba 로 일하고 있는 회사에 외부 솔루션 엔지니어가
+         방문을 하였습니다.  엑셈의 솔루션 엔지니어가 다음과 같은 요청을 하였습니다.
+
+  1.  maxguage 유져 생성(패스워드: maxguage1234)
+  2.  maxguage  유져에게 권한을 주는데 connect, resource, 데이터 딕셔너리를 조회할 수
+      있는 권한을 부여
+
+답:    connect  /  as  sysdba
+
+       create   user  maxguage
+         identified  by  maxguage1234;
+
+       grant  connect, resource  to maxguage;
+
+       grant select_catalog_role  to  maxguage;
+
+       connect  maxguage/maxguage1234
+
+       select count(*) from dba_tables;
+
+설명: select_catalog_role 은 dba 권한 없이도 dba_ 시작하는 데이터 딕셔너리를
+       볼 수 있게 해주는 role 입니다. 

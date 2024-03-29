@@ -1,0 +1,105 @@
+
+▣ 10.5 테이블 생성 스크립트를 추출할 줄 알아야해요
+
+connect sh/sh
+
+create  table  sales100
+  as
+   select  * from sales;
+
+set  long  50000
+
+select  dbms_metadata.get_ddl('TABLE', TABLE_NAME, 'SH')
+    from  user_tables
+    where  table_name='SALES100';
+
+ CREATE TABLE "SH"."SALES100"
+   (    "PROD_ID" NUMBER NOT NULL ENABLE,
+        "CUST_ID" NUMBER NOT NULL ENABLE,
+        "TIME_ID" DATE NOT NULL ENABLE,
+        "CHANNEL_ID" NUMBER NOT NULL ENABLE,
+        "PROMO_ID" NUMBER NOT NULL ENABLE,
+        "QUANTITY_SOLD" NUMBER(10,2) NOT NULL ENABLE,
+        "AMOUNT_SOLD" NUMBER(10,2) NOT NULL ENABLE
+   ) SEGMENT CREATION IMMEDIATE
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DE
+FAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "USERS"
+
+문제1.  SH 계정의 PRODUCTS 테이블의 테이블 생성 스크립트를 추출하시오 !
+
+set  long  50000
+
+select  dbms_metadata.get_ddl('TABLE', TABLE_NAME, 'SH')
+    from  user_tables
+    where  table_name='PRODUCTS';
+
+문제2. 테이블명을 물어보게하고 테이블명을 입력하면 해당 테이블 생성 스크립트가
+         추출되게하시오 !
+
+SH> @table_c.sql 
+
+   테이블명을 입력하세요 ~   products 
+
+SH> ed  table_c.sql
+
+accept  p_table  prompt  '테이블명을 입력하세요 ~  '
+
+set  long  50000
+set  lines 3000
+set  pages 3000
+
+select  dbms_metadata.get_ddl('TABLE', TABLE_NAME, 'SH')
+    from  user_tables
+    where  table_name=upper('&p_table');
+
+문제3.  emp 테이블을 emp.csv 로 생성하시오 !
+
+-- Set up the environment
+SET ECHO OFF
+SET TERMOUT OFF
+SET FEEDBACK OFF
+SET HEADING OFF
+
+-- Remove extra spaces
+SET PAGESIZE 0
+SET LINESIZE 1000
+SET TRIMSPOOL ON
+
+-- Set the column separator and the text qualifier
+SET COLSEP ','
+SET SQLFORMAT "csv"
+
+-- Start spooling the output to a file
+SPOOL  /home/oracle/emp.csv
+
+-- Query to export the data
+SELECT /*csv*/ * FROM  emp;
+
+-- Stop spooling
+SPOOL OFF
+
+-- Reset environment
+SET TERMOUT ON
+SET FEEDBACK ON
+SET HEADING ON
+SET PAGESIZE 14
+
+문제4. sqldeveloper 를 이용해서 emp.csv 를  생성하시오 !
+
+$ lsrnctl  start
+$ lsnrctl  status
+
+문제5. sqldeveloper 를 이용해서 hr 계정의 employees 테이블을 
+         employees.csv 로 생성하시오 !
+
+  1. csv 를 테이블로 구성해야하는 위치
+  2. 테이블을 csv 로 생성해야하는 위치 
+
+※ data  이행 3가지 ?
+
+  1.  서브쿼리를 사용한 insert
+  2.  SQL*loader 
+  3.  export/import 

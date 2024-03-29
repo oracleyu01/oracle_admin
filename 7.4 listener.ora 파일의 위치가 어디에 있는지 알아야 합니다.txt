@@ -1,0 +1,99 @@
+▩ 7.4 listener.ora 파일의 위치가 어디에 있는지 알아야 합니다
+
+ 책 p6-10 그림 
+
+리눅스 서버의  listener.ora 파일의 위치가 기본 위치는 아래입니다.
+
+ $GRID_HOME/network/admin   
+
+/u01/app/oracle/product/11.2.0/grid/network/admin
+
+여기에 있는 listener.ora 와 sqlnet.ora 를  ORACLE_HOME 밑에 network 밑에 admin
+밑에 둡니다. 
+
+$ cd  $ORACLE_HOME/network/admin
+$ ls 
+
+listener.ora  samples  shrept.lst  sqlnet.ora  tnsnames.ora
+
+그리고 리스너를 내렸다 올립니다.   근데 이때 리스너가 잘 안내려가거나
+또는 리스너를 올릴때 이미 사용중이다라고 하면서 에러가 나면 ?
+
+https://cafe.daum.net/oracleoracle/So33/244  <-- 호일이가 올린글을 참고
+
+■  실습:
+
+#1. 리스너를 내립니다. 
+
+$ lsnrctl  stop 
+
+#2.  GRID_HOME/network/admin 밑에 있는 listener.ora 와 sqlnet.ora 를
+      ORACLE_HOME/network/admin 밑으로 이동 하시오 !
+
+$ cd  $GRID_HOME/network/admin 
+$ ls
+
+$ mv  listener.ora   $ORACLE_HOME/network/admin
+$ mv  sqlnet.ora  $ORACLE_HOME/network/admin
+
+#3. 리스너를 올립니다.
+
+$ lsrnctl  start
+
+
+#4. 리스너의 상태를 확인합니다.
+
+$ lsnrctl  status 
+
+#5. 리스너의 host 를 본인의 아이피 주소로 변경하고 리스너를 내렸다 올립니다.
+
+$ cd $ORACLE_HOME/network/admin
+
+$ vi  listener.ora 
+
+  host 의 아이피주소를 넣습니다. 
+
+이때 리스너를 올렸는데도 계속해서 서비스가 등록이 자동으로 안되면
+다음과 같이 조치합니다. 
+
+sqlnet.ora 에  접속 차단하겠금 막은 파라미터들을 전부 주석 처리합니다.
+그리고 나서 다시 리스너를 내렸다 올립니다.
+
+NAMES.DIRECTORY_PATH= (TNSNAMES, EZCONNECT)
+
+ADR_BASE = /u01/app/oracle
+
+#tcp.validnode_checking=yes
+#tcp.invited_nodes=(192.168.19.60,192.168.19.39,192.168.19.93,192.168.19.14)
+
+
+#6. 윈도우의 클라이언트 쪽에 나의 tnsnames.ora 의 위치에 가면 sqlnet.ora 가 
+     있을겁니다. 거기의 내용을 아래와 같이 설정해줍니다.
+
+SQLNET.AUTHENTICATION_SERVICES= (NTS)
+
+NAMES.DIRECTORY_PATH= (TNSNAMES,EZCONNECT)
+
+
+#7.  클라이언트인 윈도우에서 명령 프롬프트창을 열고 다음과 같이 리눅스 서버에
+      리스너 통해서 접속되는지 확인해봅니다.
+
+1. easy connect 방식으로도 접속되고 
+
+C:\Users\ITWILL>  sqlplus scott/tiger@192.168.19.60:1521/orcl.us.oracle.com
+
+2. tns별칭으로 접속되고
+
+C:\Users\ITWILL> sqlplus  scott/tiger@orcl_11g
+
+※ 지각한 짝꿍에게 알려줘야할 사항 
+
+1. 정리를 해보면 리스너의 서비스 등록이 바로 안되었던 이유는
+   서버의 sqlnet.ora 에  아이피 접속 차단하는 파라미터 때문이었습니다. 
+  파라미터를 주석으로 막고  리스너를 내렸다 올려야 합니다.
+
+2. 클라이언트의 sqlnet 에  다음과 같이 설정이 되어야합니다.
+
+SQLNET.AUTHENTICATION_SERVICES= (NTS)
+
+NAMES.DIRECTORY_PATH= (TNSNAMES,EZCONNECT)

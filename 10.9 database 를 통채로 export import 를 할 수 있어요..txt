@@ -1,0 +1,35 @@
+
+▣ 10.9 database 를 통채로 export/import 를 할 수 있어요.
+
+ * export / import 가 4가지 ?
+ 
+ 1. table  level
+ 2. 유져  level
+ 3. 테이블 스페이스 level
+ 4. 데이터 베이스 level 
+
+■ database level 로 export / import 
+
+  1. complete  ~>  database 전체를 export
+  2. incremental  ~> database 전체를 export 한 이후에 변경된 부분만 export
+  3. cumulative ~> 변경된 부분을 누적해서 export 
+
+     월                        화             수            목             금              토
+
+   complete               incre          incre           incre         incre      cumulative
+
+■ 실습
+
+#1.  database level 로 export 를 받는데 옵션을 complete 로 export 받으시오 !
+
+$ exp  full=y file=complete01.dmp inctype=complete
+ 
+Username: sys as sysdba
+Password: oracle
+
+#2.  database level 로 export 를 받는데 옵션을 incremental  로 export 받으시오 !
+
+$ exp  full=y file=inc01.dmp inctype=incremental
+ 
+Username: sys as sysdba
+Password: oracle

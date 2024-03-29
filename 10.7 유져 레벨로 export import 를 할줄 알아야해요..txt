@@ -1,0 +1,123 @@
+▣ 10.7 유져 레벨로 export /import 를 할줄 알아야해요
+
+#1. orcl 쪽의 scott 계정의 모든 테이블들을 export 받으시오 
+
+$ . oraenv  
+      oracle_sid ? orcl 
+
+$ exp  scott/tiger  owner=scott  file=scott.dmp
+
+※ 현업에서는 위의 작업을 하면 scott.dmp 의 파일이 굉장히 큽니다.
+    그래서 리눅스 os 의 여유공간이 부족하면 안되니까 반드시 df -h 를 수행해서
+    여유 공간이 있는지 확인해봅니다. 
+
+#2. prod 쪽에 scott3 라는 유져를 생성합니다. 
+
+$ . oraenv
+PROD(SYS) > create  user  scott3
+                    identified  by  tiger;
+
+PROD(SYS) > grant  resource, connect  to scott3;
+
+#3.  orcl 에서 생성한 scott.dmp 를 PROD쪽에 scott3 유져의 테이블들로 임폴트
+      하시오 !
+
+[PROD:~]$ imp  system/oracle  file=scott.dmp  fromuser=scott   touser=scott3
+
+ 임폴트를 하다 보면 자주 생기는 문제가 있습니다. 
+
+ 1.  임폴트하려는 db 의 테이블 스페이스의 공간이 부족할 때
+     지혜롭게 임폴트하려면 먼저 scott3 유져의 default tablespace 가 뭔지 확인해서
+     그 테이블 스페이스의 여유공간이 얼마나 있는지 확인을 해야합니다. 
+
+ 2.  undo  테이블 스페이스의 공간도 넉넉해야 임폴트가 수월하게 잘 됩니다. 
+
+문제1.  orcl 쪽의 scott 계정의 테이블의 갯수과 테이블의 데이터의 건수와
+          PROD 쪽의 scott3 계정의 테이블의 갯수과 데이터의 건수가 서로 일치하는지
+         확인하시오 !
+
+#1. orcl 쪽에 scott 계정으로 접속해서  유져 레벨로 통계정보를 수집합니다.
+orcl(SCOTT) > exec dbms_stats.gather_schema_stats('SCOTT');
+
+#2. user_tables 를 조회해서 테이블 이름과 num_rows 를 조회합니다.
+
+orcl(SCOTT) > select table_name, num_rows
+             from user_tables;
+
+
+#3. PROD 쪽에 scott3 계정으로 접속해서 유져 레벨로 통계정보를 수집합니다.
+
+PROD(SCOTT3) > exec dbms_stats.gather_schema_stats('SCOTT3');
+
+#4. user_tables 를 조회해서 테이블 이름과 num_rows 를 조회합니다.
+
+
+#5. scott3 쪽에서 db 링크를 생성하는데 orcl db의 scott 의 테이블을 엑세스 할 수
+      있는 db 링크를 생성하시오 !
+
+ connect  /as  sysdba
+ grant  create public  database  link  to scott3;
+ grant  drop  public  database  link   to scott3;
+ connect scott3/tiger
+
+ create public  database  link   orcl_scott_link
+  connect  to  scott
+  identified  by  tiger
+  using  '192.168.19.60:1521/orcl.us.oracle.com'; 
+
+ select *
+   from dept@orcl_scott_link;
+
+ exec dbms_stats.gather_schema_stats('SCOTT3');
+
+ select  table_name, num_rows
+   from  user_tables@orcl_scott_link
+ minus
+ select  table_name, num_rows
+  from  user_tables; 
+
+문제2.  유져 레벨로 넘어오지 않은 아래의 테이블 3개를 따로 테이블 레벨로 
+           export 해서 넘기시오 !
+
+BONUS                                   0
+RATINGS                                 0
+SALES100                                0
+
+[orcl:~]$ exp scott/tiger tables=bonus file=bonus.dmp
+[orcl:~]$ exp scott/tiger tables=ratings file=ratings.dmp
+[orcl:~]$ exp scott/tiger tables=sales100 file=sales100.dmp
+
+0 건인 것들은 그냥 prod 쪽에 테이블 구조만 만들어줍니다. 
+
+ CREATE TABLE "SCOTT3"."BONUS"
+   (    ENAME VARCHAR2(10),
+        JOB VARCHAR2(9),
+        SAL NUMBER,
+        COMM NUMBER
+   ) ;
+
+CREATE TABLE "SCOTT3"."SALES100"
+   (     PROD_ID  NUMBER NOT NULL ENABLE,
+         CUST_ID  NUMBER NOT NULL ENABLE,
+         TIME_ID  DATE NOT NULL ENABLE,
+         CHANNEL_ID  NUMBER NOT NULL ENABLE,
+         PROMO_ID  NUMBER NOT NULL ENABLE,
+         QUANTITY_SOLD  NUMBER(10,2) NOT NULL ENABLE,
+         AMOUNT_SOLD  NUMBER(10,2) NOT NULL ENABLE
+   );
+
+CREATE TABLE "SCOTT3"."RATINGS"
+   (     USERID  NUMBER(10,0),
+         MOVIEID  NUMBER(10,0),
+         RATING  NUMBER(10,0),
+         TSTAMP  VARCHAR2(20)
+   ) ;
+
+오늘의 마지막 문제. (이수자 평가 제출용 1번)
+
+  여러분들 영문 이름 DB 를 올려서 여기에  king 이라는 유져를 생성하고 
+  orcl 쪽의 scott 계정의 모든 테이블들을 여러분 영문이름 db의 king 유져에
+  전부 이행하시오 !
+
+ 오늘 배운 내용을 다 동원해서 수행하고 여러분들 영문이름 db 이름이 보이게
+ 해서 서로 건수 비교해서 차이없는 화면 캡쳐해서 제출하면 됩니다. 

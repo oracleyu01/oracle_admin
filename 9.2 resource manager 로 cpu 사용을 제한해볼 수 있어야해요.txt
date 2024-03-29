@@ -1,0 +1,19 @@
+▣ 9.2 resource manager 로 cpu 사용을 제한해볼 수 있어야해요
+
+ 1. 현재 컨슈머 그룹들의 cpu 사용율을 실시간으로 확인하고 싶다면 ?
+
+   select  name, consumed_cpu_time, cpu_wait_time from  v$rsrc_consumer_group;
+
+     SYS_GROUP    ------------>  sys, system 유져       cpu_p1   100% 
+     ONLINE_USERS ------------>  scott 유져              cpu_p2    70%
+     OTHER_GROUPS   --------->  hr, sh 유져             cpu_p2    30% 
+
+
+문제1.  scott 으로 접속해서 cpu 사용율을 과도하게 올리시오 !
+
+scott> select  count(*)
+           from  sh.sales,  sh.sales;
+
+설명:  scott 이 아무리 cpu 를 100% 를 다 쓰더라도 cpu 사용에 대한 우선순위 1순위는
+        sys 유져와 system 유져이므로  db에 cpu 사용에 대한 부하가 있더라도
+        sys 또는 system 유져로 접속할 수 있고 쿼리도 실행할 수 있습니다. 

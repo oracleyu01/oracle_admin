@@ -1,0 +1,230 @@
+▣ 8.4 보안을 강화 하기 위해서 유져를 잠그거나 암호를 자주 변경해야해요
+
+
+* db 의 보안을 철저하게 하기 위해 dba 가 반드시 지켜야할 수칙 !
+
+1.  불필요한 계정은 잠궈버립니다.
+2.  중요 계정의 패스워드는 주기적으로 변경해야 합니다.
+
+■ 실습1.  불필요한 계정을 확인하고 잠궈버리기 
+
+PROD> select  username, account_status  from  dba_users; 
+
+PROD> alter  user  king2  account  lock;
+
+PROD> select  username, account_status  from  dba_users; 
+
+문제1. scott2 와 james 계정도 잠그시오 !
+
+PROD> alter user scott2  account lock;
+
+PROD> alter user james account lock;
+
+문제2. 다시 잠긴 계정의 lock 을 해제합니다. king2, scott2, james 
+
+PROD>  alter   user   king2  account  unlock;
+
+PROD>  alter  user  scott2  account  unlock;
+
+PROD>  alter  user   james  account   unlock;
+
+■ 실습2. 패스워드 변경하기 
+
+#1. scott 계정의 패스워드를  oracle1234 로 변경하시오 !
+
+PROD>  alter  user  scott  identified  by  oracle1234; 
+
+문제1.  그럼 다시 scott 의 패스워드를 tiger 로 변경하시오 !
+
+PROD> alter  user  scott  identified  by  tiger; 
+
+▣ 예제68.  오라클의 권한의 종류는 크게 2가지가 있어요.
+
+ 유져들에게 권한을 줄 때는 꼭 필요한 권한만 부여해야합니다.
+
+  1. 시스템 권한:  유져가 db 에서 특정 작업을 수행할 수 있게 해주는 권한
+
+    예:  create , alter,  drop ,.....
+ 
+  2. 객체 권한 :  유져가 특정 객체를 select 또는 변경할 수 있는 권한 
+
+    예:  select,  update, delete, insert 권한 
+
+■ 실습1. 시스템 권한 실습하기 
+
+#1. scott 계정이 가지고 있는 시스템 권한이 무엇인지 확인하시오 !
+
+PROD> connect  scott/tiger
+
+PROD> select  * from  session_privs; 
+
+#2. king2 가 가지고 있는 시스템 권한이 무엇인지 확인하시오 !
+
+PROD> connect  king2/tiger
+
+PROD> select  * from  session_privs; 
+
+#3.  sys 유져로 접속해서 king2 유져에게 create table 권한을 부여합니다. 
+
+PROD> connect  /  as  sysdba
+
+PROD> grant  create  table  to  king2;
+
+PROD> connect  king2/tiger
+
+PROD> select  * from  session_privs; 
+
+오늘의 마지막 문제.  테이블 스페이스 2개를 10m 로 각각 생성하세요.
+
+테이블 스페이스 이름은 insa01 과 insa02 입니다.
+insa01 테이블 스페이스에 emp 테이블과 똑같은 emp_insa 테이블을 생성하고 
+row migration 현상이 일어나게 합니다.  
+
+그리고 row migration 을 해결하는데 emp_insa 테이블을 insa01 테이블 스페이스
+에서 insa02 테이블 스페이스로 move 하면 해결되는지 확인하시오 !
+
+
+■ 실습1. 시스템 권한 실습하기 
+
+ 실습 순서: (si dba 가 하는일)
+
+  1.  martin1 이라는 유져를 생성합니다.
+
+   create  user  martin1
+    identified  by  tiger;
+
+  2.  martin1 유져에게 접속할 수 있는 권한을 부여합니다. 
+
+   grant  connect  to  martin1;
+
+  3.  martin1 유져에게 테이블을 생성할 수 있는 권한을 부여합니다.
+
+   grant   create   table   to  martin1;
+
+  4.  martin1 유져로 접속해서 테이블을 생성해봅니다.
+
+   connect   martin1/tiger
+
+   create  table  emp10
+   ( empno  number(10),
+     ename  varchar2(10));
+
+  insert  into  emp10  values(1111,'aaa');
+
+ERROR at line 1:
+ORA-01950: no privileges on tablespace 'EXAMPLE'
+
+문제1.  martin2 라는 유져를 생성하고 테이블을 생성할 수 있는 권한을 부여하고
+         martin2 로 접속해서 테이블을 생성하시오 
+
+ create  user  martin2
+  identified  by tiger;
+
+ grant  connect  to   martin2;
+
+ grant  create  table  to  martin2;
+
+ connect  martin2/tiger
+
+  create  table  emp10
+  ( empno   number(10),
+    ename   varchar2(10) );
+
+문제2.  테이블에 데이터 입력할 때 나는 다음의 오류를 해결하시오 !
+
+   ORA-01950: no privileges on tablespace 'EXAMPLE' 
+
+connect  / as  sysdba
+
+grant   unlimited  tablespace   to  martin1, martin2;
+
+connect martin1/tiger
+
+ insert into emp10 values(1111,'aaa');
+
+PROD> select * from session_privs;
+
+PRIVILEGE
+----------------------------------------
+CREATE SESSION
+UNLIMITED TABLESPACE
+CREATE TABLE
+
+■ 실습2. 객체권한 부여하기 실습
+
+  1.  scott 계정에서 martin1 계정에게 scott 의 emp 테이블을 select 할 수 있는 권한을
+       부여합니다. 
+
+   connect  scott/tiger
+
+   grant  select  on  emp  to  martin1; 
+
+  2.  martin1 계정에서 scott 의 emp 테이블을 select 해 봅니다. 
+
+  connect  martin1/tiger
+
+  select  *  from emp;  <--- 에러 발생
+  select  *  from  scott.emp;  <--- 잘 수행됨
+
+  3.  scott 계정에서 martin1이 emp 테이블을 편하게 조회할 수 있도록 시너님을 생성
+      합니다.
+
+   connect  scott/tiger
+
+   create  public  synonym emp  
+    for  scott.emp;
+
+  4. martin1 계정에서 emp 테이블을 스키마 이름 없이 조회해봅니다. 
+
+   connect  martin1/tiger
+
+   select  *  from  emp;
+
+문제1.  scott 계정에서 martin2 계정에게  emp 테이블을 select 할 수 있는 권한을 주고
+          martin2 계정에 emp 테이블을 select 할 수 있는지 확인하시오 !
+
+
+문제2.  scott 계정에서 martin2 계정에게 emp 테이블에 insert, update, delete 할 수 있는
+         권한을 주고 martin2 에서 emp 테이블에 insert, update, delete 가 가능한지
+         확인하시오 !
+
+PROD> connect scott/tiger
+
+PROD> grant insert, update, delete on  emp to martin2;
+
+PROD> connect martin2/tiger
+
+PROD> insert into emp(empno,ename,sal) values(1111,'aaa',3000);
+
+PROD> update emp set sal = 0 where ename='KING';
+
+PROD> delete from emp where ename='KING';
+
+PROD> rollback;
+
+※ martin1 처럼 본인이 만든 테이블은 insert, update, delete 권한을 따로 받지 않아도
+    unlimited  tablespace 권한만 있으면 얼마든지 입력,수정,삭제를 할 수 있습니다.
+
+   그런데 scott 계정처럼 다른 계정 만든 테이블을 martin1 이 insert,update,delete 를
+   하려면 따로 insert, update, delete 권한을 받아야 합니다.
+
+문제3.  dba 에게 유용한 권한 관련 스크립트 2개를 저장하시오 !
+
+ 1. 내가 가지고 있는 시스템 권한 확인하기 !
+
+   select  * from  session_privs; 
+
+   save system_priv.sql
+ 
+2. 내가 가지고 있는 객체 권한 확인하기 ! 
+
+col  object for  a25
+col  grantee  for  a15
+col  grantor  for a15
+col  what_granted  for a10
+
+ select  owner || '.' || table_name  object, 
+         privilege   what_granted, grantable, grantee, grantor
+     from   user_tab_privs; 
+
+SQL> ed  obj_priv.sql 

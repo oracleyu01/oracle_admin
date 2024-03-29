@@ -1,0 +1,269 @@
+
+▣ 11.1 db reorg 작업하기
+
+ - db  reorg 작업후에 얻을 수 있는 효과 2가지 ?  1. 성능이 좋아진다.
+                                                               2. 공간이 확보된다. 
+
+ - db  reorg 작업을 하게 되었을 때 나타나는 구체적인 효과
+
+  1. HWM(High Water Mark) 를 아래로 내립니다.
+  2. ROW  Migration 현상이 일어난 row들을 정리
+  3. 여유공간이 확보됩니다. 
+
+※  db reorg 작업 방법 3가지?
+
+  1.  table export ---->  table drop -------> table import 
+
+  2.  table 을 다른 테이블 스페이스로 move  하거나   
+             을 같은 테이블 스페이스로 move
+
+  3.  table compack ---------> shrink 
+
+■ 실습 
+
+
+■  테이블을 move 하는 것으로 db reorg 하기 
+
+  1. scott 유져에서 emp 테이블의 HWM 를 높인다. 
+
+  SQL> insert  into emp
+         select  *
+           from emp;
+  
+  SQL>   /  엔터  <---------  10번 수행 
+  SQL>  commit;
+  SQL>  delete  from  emp  where  deptno in (10,20);
+  SQL>  commit; 
+
+ 2. emp 테이블의 HWM 가 어떻게 되는지 확인한다.
+
+ select  count(distinct dbms_rowid.rowid_block_number(rowid) ) blocks
+    from  emp;
+
+         170        <---- High Water Mark 까지의 블럭의 갯수
+
+ 3. emp 테이블이 어느 테이블스페이스에 있는지 조회하시오 !
+
+   select  table_name, tablespace_name
+     from  user_tables
+     where  table_name='EMP';
+
+   create  tablespace  ts100
+      datafile  '/home/oracle/ts100.dbf' size 50m;
+
+ 4. emp 테이블을 ts100 테이블스페이스로 move 하시오 !
+
+   alter  table  emp   move   tablespace  ts100;
+  
+
+ 5. emp 테이블이 다른 테이블스페이스로 이동했는지 확인한다.
+
+   select  table_name, tablespace_name
+     from  user_tables
+     where  table_name='EMP';
+
+ 6. High Water Mark 가 아래로 내려왔는지 확인하시오 !
+
+ select  count(distinct dbms_rowid.rowid_block_number(rowid) ) blocks
+    from  emp;
+
+       77 
+
+문제1. 위의 작업을 이번에는 dept 테이블을 가지고 똑같이 테스트 하시오 !
+
+alter  system  set  resource_manager_plan=''; 
+
+connect scott/tiger
+
+※ 위의 move 작업을 할 때 주의할 사항이 무엇인가 ?
+
+    emp 와 dept 테이블에 인덱스가 있다면 move 시킨 이후에 반드시 
+    그 인덱스가 사용가능한지 확인해야합니다. 
+
+   만약 사용이 불가능하다면 ?  관련 인덱스를 rebuild 를 해야합니다. 
+
+■ 실습 
+
+▣  테이블에 인덱스가 있는 상태에서 테이블 move 시키기
+  
+  scott 으로 접속해서 수행합니다.
+
+   @demobld.sql
+   create  index  emp_empno  on  emp(empno);
+   create  index  emp_ename  on  emp(ename);
+   create  index  emp_sal    on  emp(sal);
+   create  index  emp_job    on  emp(job);
+   create  index  emp_detpno on  emp(deptno);
+
+   select  index_name, status
+      from  user_indexes
+      where  table_name='EMP';
+
+   alter  table  emp  move  tablespace   ts100;  
+
+   select  index_name, status
+      from  user_indexes
+      where  table_name='EMP';
+
+- emp 테이블과 관련된 인덱스들을 rebuild 하여 valid 한 상태로 만들기 
+
+ alter  index  emp_sal  rebuild  online; 
+
+ select  index_name, status
+      from  user_indexes
+      where  table_name='EMP';
+
+- scott 이 가지고 있는 모든 unusable 된 index 에 대해서 다 rebuild 하는
+   프로시져를 생성하시오 !
+
+sys>  grant  select  on  user_indexes  to  scott;
+sys>  grant  alter  any  index  to  scott; 
+
+scott>
+ create  or  replace   procedure   index_rebuild
+ authid  current_user
+  is
+      cursor   emp_cursor  is
+         select index_name  as  name
+             from  user_indexes
+             where  status ='UNUSABLE'; 
+
+      v_stmt    varchar2(100); 
+
+ begin
+       for   emp_record  in  emp_cursor   loop
+ 
+        v_stmt := ' alter  index  ' || emp_record.name || ' rebuild online';
+
+       execute  immediate   v_stmt ;
+
+       end  loop;
+end;
+/
+
+set serveroutput on
+
+exec  index_rebuild;
+
+
+
+※ authid  current_user 는 프로시져를 수행하는 유져의 권한을 따르겠다는것입니다.
+
+ user_xxx, all_xxx, dba_xxx 같은 데이터 딕셔너리를 PL/SQL 에서 조회할 때는
+ 프로시져 생성시 authid current_user 옵션을 사용해서 권한 오류를 방지 할 수 있습니다.
+
+select  index_name, status
+      from  user_indexes
+      where  table_name='EMP';
+
+INDEX_NAME                     STATUS
+------------------------------ --------
+EMP_DETPNO                     VALID
+EMP_JOB                        VALID
+EMP_SAL                        VALID
+EMP_ENAME                      VALID
+EMP_EMPNO                      VALID
+
+문제1.  hr 계정으로 접속해서  employees 테이블을  ts100 테이블 스페이스로 이동하고
+          관련된 인덱스를 전부 rebuild 해서  인덱스를 사용가능한 상태로 만드시오 !
+
+  hr 계정의 employees 테이블을 db reorg 작업하시오 !
+
+* DB reorg 작업 3가지 ?
+
+  1.  table export ---> table drop --> table import
+  2.  table  move ----> 관련된 인덱스 rebuild 
+  3.  table compact ---> shrink
+
+■  table compck 과 shrink 로 db reorg 작업하기
+
+  p 18-28 쪽 그림 
+
+ 1. table  compact :  비어있는 공간으로 data 를 채워넣는것
+ 2. table shrink  :  HWM 를 아래로 내리는 작업 
+
+ ■ 새로운 db reorg 작업 
+
+  1.  scott 으로 접속해서 table 을 준비한다. 
+
+      @demobld.sql
+
+      insert   into  emp
+       select  *
+           from  emp;   <---------  10번 수행 
+
+      delete  from  emp  where  deptno in (10,20);
+
+  2. emp 테이블의 실제 사용하고 있는 block 의 갯수 
+
+ select count(distinct dbms_rowid.rowid_block_number(rowid)) 
+        as blocks
+    from  emp;
+
+  169
+
+  3. High water mark 까지 할당된 block 의 갯수 확인
+
+  select  blocks
+    from   user_segments
+    where  segment_name='EMP';
+
+   256 
+
+ 4. 테이블 compact 작업 수행
+
+   alter  table  emp  enable  row  movement;
+
+   alter  table  emp  shrink  space  compact;
+
+  5. emp 테이블의 실제 사용하고 있는 block 의 갯수 
+
+ select count(distinct dbms_rowid.rowid_block_number(rowid)) 
+        as blocks
+    from  emp;
+
+  77
+
+  6. High water mark 까지 할당된 block 의 갯수 확인
+
+  select  blocks
+    from   user_segments
+    where  segment_name='EMP';
+
+    BLOCKS
+   ----------
+       256
+
+ 7.  High water mark 를 내려주는 작업 수행 
+  
+   alter  table  emp  shrink  space; 
+
+  select  blocks
+    from   user_segments
+    where  segment_name='EMP';
+
+    BLOCKS
+  ----------
+        88
+
+오늘의 마지막 문제.  emp 테이블을 다음과 같이 구성하고 10번과 20번을 지운후에
+                          compact 과 shrink 로 HWM 가 내려가는지 테스트 하고 
+                          관련 인덱스가 VALID 한지 확인하시오 ! (이수자 평가 4번)
+
+   @demobld.sql
+   create  index  emp_empno  on  emp(empno);
+   create  index  emp_ename  on  emp(ename);
+   create  index  emp_sal    on  emp(sal);
+   create  index  emp_job    on  emp(job);
+   create  index  emp_detpno on  emp(deptno);
+
+  1. scott 유져에서 emp 테이블의 HWM 를 높인다. 
+
+  SQL> insert  into emp
+         select  *
+           from emp;
+  
+  SQL>   /  엔터  <---------  10번 수행 
+  SQL>  commit;
+  SQL>  delete  from  emp  where  deptno in (10,20);
+  SQL>  commit; 

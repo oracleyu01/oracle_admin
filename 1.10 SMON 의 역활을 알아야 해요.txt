@@ -1,0 +1,42 @@
+
+▩ 1.10 SMON(System Monitor process)  
+
+ smon의 역활이 무엇인가 ?   1.   오라클 startup 시  인스턴스 복구 작업 수행 
+                                           ( 오라클이 비정상적으로 종료 되었을때)
+
+                                      2. 사용하지 않는 temporary  segment 를 정리 
+
+   with 절을 사용하면 템프 테이블이 자동으로 만들어집니다. 
+   with 절이 끝나면 누군가 정리를 해야하는데 smon 이 합니다. 
+
+복구 과정:
+
+  update  emp
+   set  sal = 0
+   where  ename='SCOTT';
+
+  commit;  
+
+
+관련 그림 : https://cafe.daum.net/oracleoracle/So33/72
+
+■  실습
+
+#1.  scott 으로 접속해서  KING 의 월급을 0 을 변경합니다.
+
+SQL>  update  emp
+            set  sal = 0
+           where  ename='KING';
+
+SQL>  commit;
+
+#2. 터미널 창을 하나 더 열고 sys 로 접속해서 db 를 비정상적으로 확 내립니다.
+
+SQL>  shudown  abort  
+
+#3. 그리고 startup 합니다. 
+
+문제1.  이번에는  ALLEN 의 월급을 0 로 변경하고 commit 하지 않고 다른 터미널창 
+          sys 유져에서  db 를  shutdown abort 로 내리고 다시 올리면 ALLEN 의 월급은
+          어떻게 되었을까요 ?
+

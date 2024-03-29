@@ -1,0 +1,48 @@
+▣ 8.6 내가 받은 시스템 권한을 남에게 주려면 with admin option을 알아야해요
+ 
+p8-15  그림1
+
+■ 실습1.   with admin option  사용하기 실습
+
+ 1. scott   계정에서  martin1 에게  create procedure 권한을 줍니다.
+    권한을 줄 때 with admin option 을 써서 줍니다.
+
+   connect  scott/tiger
+   grant  create procedure  to  martin1  with  admin  option;
+
+ 2. matin1 계정에서 martin2 계정에 create procedure 권한을 부여합니다.
+
+   connect  martin1/tiger
+   @system_priv.sql 
+   grant  create procedure  to  martin2;
+ 
+ 3. scott 계정에서 martin1 계정에게 부여했던 create procedure 권한을 취소합니다.
+
+   connect  scott/tiger
+   revoke  create  procedure  from  martin1;
+
+ 4. martin1 계정에서 create procedure 권한이 없어졌는지 확인합니다.
+    connect martin1/tiger
+    @system_priv.sql
+
+ 5. martin2 계정에서 create procedure 권한이 없어졌는지 확인합니다. (중요)
+   connect martin2/tiger
+    @system_priv.sql
+
+문제1.  scott 계정에서  martin1 계정에게  create trigger 권한을 부여하고
+          martin1 계정에서 martin2 계정에  create trigger 권한을 부여하고
+          scott 계정에서 martin1 계정에 부여했던 create trigger 권한을 취소하면
+          martin1 과 martin2 에서 각각 가지고 있는 시스템 권한이 어떻게 되는지 
+          확인하시오 !
+
+
+문제2.  앞으로 수업 받을 때 glogin.sql 을 수정해서 sqlplus 로 접속할 때
+          db 이름과 유져이름이 같이 나오게 하시오 !
+
+[PROD:admin]$ cd $ORACLE_HOME/sqlplus/admin
+[PROD:admin]$
+[PROD:admin]$ ls -l glogin.sql
+[PROD:admin]$ vi glogin.sql
+
+define _editor='vi'
+set sqlprompt "_connect_identifier'('_user')' > "

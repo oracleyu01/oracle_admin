@@ -1,0 +1,61 @@
+▣ 6.1 undo data 가 무엇인지 알고 있어야해요
+
+ 책 p10-3 쪽 설명
+
+  읽기 일관성 설명   
+
+   원래 king 의 월급은 5000 이 었습니다. 
+
+              A  session                              B   session 
+
+    1.  update  emp
+          set  sal = 0                            
+          where ename='KING';              2.  select  ename, sal
+                                                              from emp
+                                                              where ename='KING'; 
+
+설명 그림: https://cafe.daum.net/oracleoracle/So33/385
+
+emp 테이블을 전부 지우고 commit 을 했어도 flashback 을 할 수 있는 이유는
+ undo segment 가 지운 데이터를 가지고 있기 때문입니다.
+
+기본적으로 15분동안 보관하고 있습니다. 
+                                                                  복구 data
+flashback  table       ------------------------------>    undo  data
+flashback  drop         ------------------------------>    휴지통(recyclebin) 
+flashback   query        ------------------------------>  undo  data
+flashback   version  query  ------------------------------> undo  data
+flashback   trasaction  query   ------------------------------>  undo  data
+
+* 실패한 transaction recovery ?
+
+     update 를 막 하고 있었는데 갑자기 db 가 비정상 종료 되었을 때 ?
+
+ 상황1:        scott  세션                                            SYS 세션
+
+             1. update  emp
+                  set  sal = 0           
+                 where  ename='KING';                     2.    shutdown abort
+                                                                   3.    startup
+             4.  connect scott/tiger
+                 select  ename, sal
+                     from  emp
+                     where ename='KING';
+
+   원래데로 돌려놔야하니까 5000 을 보는것입니다. 
+    이게 어떻게 가능한가 ?     바로  undo segment 에 5000이 저장되어있기 때문입니다. 
+
+■ 실습: 
+
+ 상황1:        scott  세션                                            SYS 세션
+
+             1. update  emp
+                  set  sal = 0           
+                 where  ename='KING';                     2.    shutdown abort
+                                                                   3.    startup
+             4.  exit;
+                 sqlplus scott/tiger
+
+                 select  ename, sal
+                     from  emp
+                     where ename='KING';

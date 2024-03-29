@@ -1,0 +1,79 @@
+
+▣ 10.11 현업에서 가장 많이 쓰는 유져 레벨 pump 를 사용할 수 있어야해요
+
+
+            PROD ------------------------------------> yys2
+
+     scott 의 모든 테이블                               jones2 
+
+■ 실습
+
+#1. PROD 쪽에서 SCOTT 가지고 있는 모든 객체를 유져 레벨로 export pump 합니다
+
+$ . oraenv 
+
+$ expdp  system/oracle  directory=datapump_dir   schemas=scott  dumpfile=scott.dmp
+
+#2. yys2 에 jones2 계정을 생성합니다.
+
+$ . oraenv
+yys2(SYS) > create  user  jones2
+                  identified  by  tiger;
+
+yys2(SYS) > grant  dba  to  jones2;
+
+#3. export 받은 파일을 yys2 쪽의 디렉토리로 copy 합니다.
+
+                   prod  ------------------------------------>  yys2
+위치:   /home/oracle/pump_prod                     /home/oracle/pump_yys2
+디렉토리명:  datapump_dir                                yys2_dir
+테이블 :      emp                                              emp
+유져:         scott                                              jones2
+테이블스페이스: example                                  ts450
+
+$ cp /home/oracle/pump_prod/scott.dmp   /home/oracle/pump_yys2/scott.dmp
+
+#4. yys2 db 에 유져 레벨로 임폴트 합니다. 
+
+$ . oraenv
+
+$ impdp  system/oracle directory=yys2_dir  dumpfile=scott.dmp  remap_schema=scott:jones2 remap_tablespace=example:ts450 
+
+문제1.  만약에 중간에 테이블이 많이 안넘어 갔으면 jones2 유져를 drop하고
+          다시 생성한 다음에 다시 import 를 합니다. 
+
+drop  user  jones2  cascade;
+
+다시 임폴트할 때 yys2 db 에 유져 레벨로 임폴트 합니다. 
+
+$ . oraenv
+
+$ impdp  system/oracle directory=yys2_dir  dumpfile=scott.dmp  remap_schema=scott:jones2 remap_tablespace=example:ts450 remap_tablespace=ts50:ts450 remap_tablespace=ts5000:ts450  remap_tablespace=test100:ts450 remap_tablespace=ts800:ts450 remap_tablespace=ts7100:ts450 remap_tablespace=system:ts450
+
+문제2. 양쪽에서  스키마 레벨로 통계정보를 수집하고 user_tables 를 조회해서
+         테이블 이름과 num_rows 를 조회하시오 !
+
+prod 쪽에서
+
+scott>  exec dbms_stats.gather_schema_stats('SCOTT');
+scott>  select table_name, num_rows
+           from user_tables;
+
+yys2 쪽에서 
+
+jones2> exec dbms_stats.gather_schema_stats('JONES2');
+jones2> select table_name, num_rows
+             from user_tables;
+
+오늘의 마지막 문제.  prod 쪽과 yys2 쪽을 테이블을 비교하기 위해
+                           db 링크를 생성하고 다음과 같이 조회했을때 잘 이행되었는지
+                            확인하시오! 
+
+jones2> select table_name, num_rows
+              from user_tables@prod_link
+             minus
+            select table_name, num_rows
+               from user_tables;
+
+ no row select 로 나온 화면을 캡쳐해서 올리고 검사받으세요 ~~
+ 

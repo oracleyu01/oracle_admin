@@ -1,0 +1,56 @@
+
+▩ 5.1 테이블 스페이스 생성과 관리에 대한 A4지 한장이 머리속에 있어야해요
+
+1. 데이터 베이스 :  가장 큰 저장 단위
+
+ 오라클을 설치하면 database 를 가장 먼저 생성합니다. 
+
+ * db 이름을 확인합니다.
+
+  select  name from v$database; 
+
+2. 테이블 스페이스(tablespace)
+
+   하나의 데이터베이스는 여러개의 테이블 스페이스로 구성되어 있습니다.
+
+ * 테이블 스페이스를 조회합니다.
+
+  select  tablespace_name,  file_name
+    from  dba_data_files;
+
+ ※ 오라클에서는 왜 테이블 스페이스라는 논리적 저장 단위를 두었는가 ?
+
+  데이터가 많아지면 데이터를 별도로 구분해서 관리해야하기 때문에 필요합ㄴ디ㅏ.
+
+  예: 집에                방이 여러개 있는것을 생각하시면 됩니다.
+      ↓                    ↓
+   데이터베이스     테이블 스페이스 
+
+■ 테이블 스페이스의 종류
+
+ 1. system  :   데이터 사전을 저장하고 있는 테이블 스페이스
+                      ↓
+                   user_xxx
+                   all_xxx
+                   dba_xxx 
+
+           오라클을 운영하기 위한 아주 중요한 데이터가 여기 들어있기 때문에
+           만약 system tablespace 가 손상이되면 db 운영이 안됩니다. 
+
+ 2. sysaux   :  오라클 성능을 분석할 수 있는 데이터가 들어있는 테이블 스페이스 입니다.
+
+ 3. undotbs1 :  롤백을 하기 위한 데이터가 들어있는 테이블 스페이스 입니다. 
+ 4. users  :    emp 테이블과 같은 사용자 데이터가 들어있는 테이블 스페이스 입니다.
+ 5. example :  hr 계정, sh 계정의 테이블들이 저장되어있는 테이블 스페이스 입니다.
+
+  dba 가 db 의 기능에 관련해서 자주 테스트를 해봐야해서 example 테이블 스페이스가
+  필요합니다. 
+
+문제1.  (dba에게 유용한 스크립트 생성)   tablespace.sql 이라는 이름으로 아래의
+          스크립트를 저장하시오 !
+
+  col  tablespace_name  for a10
+  col file_name for a45
+
+  select  tablespace_name, status, file_name
+     from  dba_data_files; 

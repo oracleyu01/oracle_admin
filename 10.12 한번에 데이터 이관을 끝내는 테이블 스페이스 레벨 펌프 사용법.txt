@@ -1,0 +1,157 @@
+▣ 10.12 한번에 데이터 이관을 끝내는 테이블 스페이스 레벨 펌프 사용법
+
+
+-  export / import   4가지
+
+ 1. table level
+ 2. user  level
+ 3. tablespace level
+ 4.  database  level 
+
+- export pump / import 4가지 
+
+ 1. table  level
+ 2. user  level
+ 3. tablespace level
+ 4. database  level
+
+※  tablespace level 로 데이터 이관할 때 주의사항 !
+
+  export 할 db 의 character set 과 import 할 db 의 charater set 이 동일해야합니다.
+
+※ 실습의 큰 그림 
+     
+                 prod  ------------------------------------>  yys2
+위치:   /home/oracle/pump_prod                     /home/oracle/pump_yys2
+디렉토리명:  datapump_dir                                yys2_dir
+테이블스페이스: ts20000                             
+                                                
+■ 실습
+
+#0. 수진이가 만든 오라클 홈 편하게 등록하는 방법 적용하기
+
+https://cafe.daum.net/oracleoracle/So33/592
+
+[yys:~]$ ps -ef | grep pmon
+
+prod 와 yys2 둘다 잘 올라왔는지 확인합니다. 안올라왔으면 하나씩 startup 하세요.
+
+#1.  prod db 에서 ts20000 테이블 스페이스를 생성합니다.
+
+PROD(SYS) >  create  tablespace  ts20000
+                 datafile  '/u01/app/oracle/oradata/PROD/disk1/ts20000.dbf' size 10m;
+
+#2.  scott 유져로 접속해서 ts20000 테이블 스페이스에 emp20000 테이블을 생성 
+
+PROD(SYS) > connect scott/tiger
+
+PROD(SCOTT) >  create  table  emp20000
+                      ( empno    number(10),
+                        ename    varchar2(10),
+                         sal        number(10) )
+                       tablespace  ts20000;
+
+PROD(SCOTT) >  insert  into  emp20000
+                        select  empno, ename, sal
+                           from  emp;
+
+PROD(SCOTT) >  commit;
+
+#3.  ts20000 테이블 스페이스를 read only 로 변경합니다.
+
+PROD(SCOTT) > connect / as sysdba
+PROD(SYS) > alter  tablespace  ts20000  read  only;
+PROD(SYS) > select  t.name, d.enabled
+                     from  v$tablespace   t, v$datafile   d
+                     where  t.ts# = d.ts#;
+
+#4.  ts20000  테이블 스페이스를 export 합니다.
+
+$ expdp  directory=datapump_dir  dumpfile=ts20000.dmp  transport_tablespace=y tablespaces=ts20000
+
+유져이름 :  sys  as sysdba
+패스워드 :  oracle 
+
+Job "SYS"."SYS_EXPORT_TRANSPORTABLE_01" successfully completed at 10:24:42
+
+[PROD:~]$ cd pump_prod
+[PROD:pump_prod]$ ls
+
+ts20000.dmp  <--- 잘 생성되었는지 확인합니다. 
+
+만약에 아래와 같이 오류가 발생했을 때 조치사항 !
+
+UDE-04031: operation generated ORACLE error 4031
+ORA-04031: unable to allocate 16 bytes of shared memory ("shared pool","select obj#,type#,ctime,mtim...","SQLA","tmp")
+
+해결방법:  PROD DB 쪽에 memory_max_target 을 1024m 로 늘리고 
+              memory_target 을 1024m 로 늘립니다. 
+
+PROD(SYS) > alter  system  set  memory_max_target=1024m  scope=spfile;
+PROD(SYS) > alter  system  set  memory_target=1024m  scope=spfile;
+PROD(SYS) > shutdown immediate
+PROD(SYS) > startup
+
+#5.  ts20000.dbf 를 yys2 쪽의 data file 이 있는쪽으로 copy 합니다.
+
+$ cp /u01/app/oracle/oradata/PROD/disk1/ts20000.dbf  /u01/app/oracle/oradata/yys2/disk1/ts20000.dbf
+
+#6.  ts20000.dmp 파일을 yys2 쪽의 pump 디렉토리로 copy 합니다.
+
+$ cp  /home/oracle/pump_prod/ts20000.dmp   /home/oracle/pump_yys2/ts20000.dmp
+
+#7.  yys2 에 ts20000 테이블 스페이스를 import  합니다.
+
+※ 임폴트 하기전에 yys2쪽에 sys 의 패스워드가 무엇인지 확인 !
+※ 임폴트 하기전에 yys2 에 scott 계정이 있는지 확인하고 dba 권한이 있는지 확인!
+
+yys2(SYS) > connect scott/tiger
+Connected.
+yys2(SCOTT) >
+yys2(SCOTT) > select * from session_roles;
+
+$ impdp  directory=yys2_dir   dumpfile=ts20000.dmp  transport_datafiles='/u01/app/oracle/oradata/yys2/disk1/ts20000.dbf'
+
+유져이름:  sys  as  sysdba
+패스워드:  oracle
+
+#8.  yys2 에서 ts20000 테이블 스페이스를 read write 로 변경합니다.
+
+yys2(SYS) > alter  tablespace  ts20000  read  write;
+
+#9.  yys2 에서 emp20000 테이블이 잘 조회되는지 확인합니다. 
+
+yys2(SCOTT) > select count(*) from emp20000;
+
+  COUNT(*)
+----------
+        14
+
+#10. prod db 에서 ts20000 테이블 스페이스를 read write 로 변경합니다. 
+
+PROD(SYS) > alter tablespace  ts20000 read write;
+
+문제1.  yys2 쪽에 ts30000 테이블 스페이스를 생성하고 scott 유져에서 
+          emp30000 테이블을 생성한 후에  ts30000 테이블 스페이스를 export 하고
+         PROD 쪽에 import 를 하시오 ~ 그리고 잘 임폴트가 되는지 확인하시오 !
+
+ 이수자 평가 제출물 문제3번이므로 마지막 결과를 캡쳐해서 가지고 있으세요.
+
+■ database level 로 export pump 하기
+
+$ expdp  directory=datapump_dir  full=y  file=complete02.dmp
+
+▣ 현업 기준으로 export / import 를 수행하는 방법을 정리
+
+ * 가장 빠르고 편한 데이터 이관 ?
+
+  1.  오라클 골든 게이트(유료)  --> 리눅스 화면에서 명령어로 수행하는 툴
+
+  2. 테이블 스페이스 레벨의 export / import 
+
+  테이블, 인덱스, 뷰, 시퀀스, 시너님, 권한, 프로시져, 트리거, 기타 등등
+
+  한번에 편하게 이관하는것이고 만약 위의 방법이 아니라면 몇 개월 프로젝트 입니다.
+
+ ※ 요즘 db 엔지니어가 갖추어야할 특별한 기술들?  1. 골든 게이트
+                                                                  2. 엑사 데이터

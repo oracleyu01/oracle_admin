@@ -1,0 +1,92 @@
+▩ 2.1 데이터 베이스 저장 영역 구조
+
+데이터베이스를 구성하는 파일들 8가지 ?
+
+  1. data file    :    data 를 저장하는 파일
+  2. redo log file :   변경사항을 기록하는 파일
+  3. control file  :   db의 구조정보를 담고 있는 파일 
+-------------------------------------------------------------------------------------------
+  4. archive log file :  리두로그 파일의 백업본
+  5. parameter  file :   인스턴스의 구성 정보가 들어있는 파일
+  6. password  file  :   특별한 권한을 가진 유져를 인증해주기 위한 파일
+  7. alert log file 과 trace file :  오라클을 진단하기 위해서 필요한 파일 
+  8. 백업 파일 :   백업본 
+
+■ 실습:
+
+ #1. data file 의 위치를 확인하시오 !
+
+  윈도우(21c):  select  file_name  from  dba_data_files;
+
+  리눅스(11g):  select  file_name  from  dba_data_files;
+  (ASM)
+
+ #2. control file 의 위치를 확인하시오 !
+
+  윈도우(21c):  select  name  from  v$controlfile;
+
+  리눅스(11g): select  name  from  v$controlfile;
+
+ #3. redo log file 의 위치를 확인하시오 ! 
+
+  윈도우(21c):  select  member  from  v$logfile;
+
+  리눅스(11g): select member  from  v$logfile;
+
+  #4. 아카이브 로그 파일의 위치 확인하시오 !
+
+  윈도우(21c) :  SQL> archive  log list
+  리눅스(11g) : SQL>  archive log list  
+
+SQL> show parameter db_recovery_file_dest
+
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+db_recovery_file_dest                string      +FRA
+db_recovery_file_dest_size           big integer 3852M
+
+ #5. 파라미터 파일의 위치를 확인하시오 !
+
+  윈도우(21c) :  SQL> show parameter  spfile
+  리눅스(11g) : SQL> show parameter spfile  
+
+D:\ORACLE19C\WINDOWS.X64_193000_DB_HOME\DATABASE\SPFILEORCL.ORA
+
+열어서 볼수는 없는 binary file 입니다. 
+
++DATA/orcl/spfileorcl.ora
+
+ #6. 패스워드 파일의 위치를 확인하시오 ! 
+
+    sys 유져의 패스워드가 등록되어있는 파일입니다. 
+
+  윈도우(21c) :  SQL> show parameter  spfile
+
+  패스워드 파일이 spfile 이 있는 곳에 같이 있습니다.  PWDorcl.ora
+
+  리눅스(11g) :  $   cd $ORACLE_HOME/dbs
+                     $  ls -l   orapworcl
+
+ #7. alert  log file 과 trace file 의 위치를 확인하시오 !
+
+  오라클의 문제가 생겼을 때 진단을 위해서 봐야하는 파일
+
+  윈도우(19c) : SQL> show  parameter   background_dump_dest 
+  리눅스(11g):  SQL> show  parameter   background_dump_dest 
+
+ /u01/app/oracle/diag/rdbms/orcl/orcl/trace
+
+■ 실습: 
+
+#1. alert log file 이 있는 곳으로 이동하시오 !
+
+ $ cd /u01/app/oracle/diag/rdbms/orcl/orcl/trace
+
+#2. alert log file 이 있는지 확인합니다.
+
+ $ ls  -l  alert*
+
+#3. alert log file 의 뒷부분만 열어서 실시간으로 변경되면 계속 변경된데 보이게하시오!
+ 
+ $ tail  -f  alert*
+

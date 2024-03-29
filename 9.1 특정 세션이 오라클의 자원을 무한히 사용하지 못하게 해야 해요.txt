@@ -1,0 +1,326 @@
+▣ 예제120.  특정 세션이 오라클의 자원을 무한히 사용하지 못하게 해야 해요.
+
+ * 자원(resource) 사용 제한을 거는 오라클 기능 2가지 ?
+
+  1. 프로파일(profile)  :  1. 자원 관리     2. 패스워드 
+  2. 리소스 관리(resource manager) : 프로파일보다 더 많은 자원 사용에 대한 제한을
+                                               걸 수 있습니다.
+
+  어떠한 제한을 할 수 있는가 ?  ( dba의 방어기제의 방법들)
+
+  1.  악성 SQL이 실행 안되도록 제한
+  2.  Lock waiting 현상에 대한 제한
+  3.  병렬 처리에 대한 제한(병렬도를 크게 못주게 설정)
+  4.  undo 사용에 대한 제한(과도한 DML 작업을 못하게)
+  5.  Active  session (waiting 하는 세션) 들에 대한 제한 
+
+     지금 현재 db 에 20명이 대기 하고 있는 상황이다라고 하면 21번째 는 그냥
+     바로 에러나면서 실패하게 합니다. 
+
+  6.  idle  시간에 대한 제한( db 접속해놓고 아무것도 안하면 세션을 끊어버림)
+  7.  execution time(실행시간) 에 대한 제한 
+
+오늘의 마지막 문제.  orcl 쪽에서  아래의 쿼리에 대한 결과를 dump 파일로 생성해서
+                           yys2 에  external 테이블로 생성하시오 ! 
+                           ( 외부 테이블명은 여러분들 편하게 만드세요)
+
+ select  ename, sal
+     from  emp
+     where   sal >  ( select  max(sal)
+                            from  emp
+                            where  deptno  =30 );
+
+■ resource manager 구현 방법(p 16-4 그림)
+
+
+ * 용어 정리 3가지
+
+  1.  resource  plan    ---->  리소스 할당에 대한 청사진(큰 계획)
+
+      예:  낮(day), 밤(night)
+
+  2.  resource consumer  group ----> 리소스의 요구사항이 유사한 그룹
+
+      예:  oltp 그룹,  batch 그룹
+
+  3.  resource plan  directive  --->  리소스를 분배하는 방법을 지정 
+
+  예:   - cpu
+        - lock  wating time
+        - undo
+        - degree(병렬도)
+        - active session 의 갯수
+        - execution  time
+        - idle  time
+
+■ 실습
+
+
+■ Resource manager 구현코드
+
+
+
+■  resourec  manager  구현
+
+orcl 쪽 db 에서 수행해주세요 ~
+
+a) SYSTEM user로 접속하여 consumer group ONLINE_USERS 를 생성한다
+
+SQL> conn system/oracle_4U
+
+SQL> exec dbms_resource_manager.create_pending_area();
+
+   -->  리소스 메니저를 구현하기 위한  영역을 설정하겠다. 
+
+-- 컨슈머 그룹 생성
+
+SQL> exec dbms_resource_manager.create_consumer_group('ONLINE_USERS','Users for Online');
+
+  ~> SYS_GROUP 과 OTHER_GROUP 은 이미 만들어져 있기 때문에 ONLINE_USERS 만 생성한다.
+       ↑                   ↑
+    dba 권한 유져들   리소스 사용에 대한 제한이 높은 유져들
+
+
+ *  db 에 만들어져있는  Consumer 그룹확인하는 명령어 
+
+ select    consumer_group 
+    from   dba_rsrc_consumer_groups
+    where   consumer_group  like  '%ONLINE%';
+
+ - resource plan DAYTIME 을 다음과 같이 생성한 후 view를 통해 확인한다.
+ 
+
+    A. SYS_GROUP    : CPU_P1=100  <-- cpu 사용을 100% 사용하게 한다. 
+
+    B. ONLINE_USERS : CPU_P2=70, MAX_IDEL_BLOCKER_TIME=30
+
+   - MAX_IDEL_BLOCKER_TIME  :  lock  wating time 을 30초로 제한하겠다.
+
+
+    C. OTHER_GROUPS : CPU_P2=30, PARALLEL_DEGREE_P1=4
+   
+PARALLEL_DEGREE_P1 : 병렬도를 4로 제한하겠다   
+
+   select  /*+  parallel(emp, 8)  */   count(*)
+     from  emp;  
+
+ 수행안되고 에러가 나면서 끝납니다. 
+
+-- 리소스 플랜 생성 (daytime)
+
+SQL> begin
+  dbms_resource_manager.create_plan('DAYTIME','Plan for day');
+end;
+/
+
+PL/SQL procedure successfully completed.
+
+ -- 위에서 생성한 daytime  plan 이 생성되었는지 확인하시오 !
+
+  select    plan
+     from dba_rsrc_plans; 
+
+-- 리소스 디렉티브 생성 (디렉티브 : 분배방법)
+
+-- 기존에 이미 있는 SYS_GROUP 은 CPU 를 1순위로 100% 사용하겠금 지시어 생성
+
+SQL> begin
+ dbms_resource_manager.create_plan_directive('DAYTIME', 'SYS_GROUP','1st Group Set',    cpu_p1=>100);
+     end;
+
+/
+
+PL/SQL procedure successfully completed.
+
+-- online_users 그룹은 lock blocking time을 30초로 지정 , cpu 사용 우선순위 2번째 이고 
+--  70% 만 사용
+
+ begin
+dbms_resource_manager.create_plan_directive('DAYTIME', 'ONLINE_USERS','2nd Group set', 
+cpu_p2=>70,max_idle_blocker_time=>30);
+  end;
+/
+
+-- other_groups 는 병렬도를 4로 지정 , cpu 사용율 우선순위가 2번째이고 30% 만 사용하겠금 설정
+
+begin
+ dbms_resource_manager.create_plan_directive('DAYTIME', 'OTHER_GROUPS','3rd Group', 
+cpu_p2=>30,parallel_degree_limit_p1=>4);
+end;
+/
+
+
+
+-- 검증 작업
+
+SQL> exec dbms_resource_manager.validate_pending_area();
+
+
+PL/SQL procedure successfully completed.
+
+
+-- 구현
+
+SQL> exec dbms_resource_manager.submit_pending_area();
+
+
+PL/SQL procedure successfully completed.
+
+ 
+
+-- 내가 어떻게 설정했는지 조회하는 방법
+
+SQL> select plan, group_or_subplan, cpu_p1, cpu_p2,  
+            parallel_degree_limit_p1 dop, max_idle_blocker_time block_t
+     from dba_rsrc_plan_directives
+     where   plan='DAYTIME'
+        order by 1,2;
+
+
+c) SCOTT user를 consumer group ONLINE_USERS로 지정하고 
+   default consumer group으로 지정한다.
+
+ 
+
+SQL> exec dbms_resource_manager_privs.grant_switch_consumer_group('SCOTT', 'ONLINE_USERS', true);
+
+ 
+
+PL/SQL procedure successfully completed.
+
+ 
+
+SQL>
+
+SQL> exec dbms_resource_manager.set_initial_consumer_group('SCOTT', 'ONLINE_USERS');
+
+
+PL/SQL procedure successfully completed.
+
+ 
+SQL>  select username, initial_rsrc_consumer_group
+           from dba_users
+           where username='SCOTT';
+
+문제1.  현재가 낮시간이므로 daytime  리소스 플랜이 활성화 되게 하시오 !
+
+답:  alter  system  set  resource_manager_plan=daytime;
+
+문제2. scott 터미널창을 2개를 열고 다음과 같이 update 를 수행해서 
+         lock 이 30초후에 풀리는지 테스트 하시오 !
+
+    scott   터미널창1                                   scott 터미널창2
+
+  update  emp
+    set  sal = 0
+    where  ename='ALLEN';                        update  emp
+                                                            set  sal = 6000
+                                                            where  ename='ALLEN';
+
+설명: 30초후에 LOCK 홀더 세션이 끊기면서 KILL 되었습니다.
+
+문제3.  위의 max_idle_blocker_time 을 60초로 변경하시오 !
+
+SYSTEM> exec dbms_resource_manager.create_pending_area();
+
+SYSTEM> begin
+             dbms_resource_manager.update_plan_directive(
+              plan=>'DAYTIME',
+              group_or_subplan=>'ONLINE_USERS',
+              new_max_idle_blocker_time=>60);
+            end;
+/
+
+SYSTEM> exec dbms_resource_manager.submit_pending_area();
+
+문제4.  max_idle_time 을 수정해서 scott 유져로 접속해서 10초동안 아무런 작업을
+          하고 있지 않으면 자동으로 접속이 끊기게 하시오 !
+
+SYSTEM> exec dbms_resource_manager.create_pending_area();
+
+SYSTEM> begin
+             dbms_resource_manager.update_plan_directive(
+              plan=>'DAYTIME',
+              group_or_subplan=>'ONLINE_USERS',
+              new_max_idle_time=>10);
+            end;
+/
+
+SYSTEM> exec dbms_resource_manager.submit_pending_area();
+
+문제5. 잘 설정이 되었는지 확인해봅니다.
+
+SYSTEM> select  plan, group_or_subplan, cpu_p1, cpu_p2,
+                      parallel_degree_limit_p1  dop,  max_idle_blocker_time  block_t,
+                      max_idle_time
+               from  dba_rsrc_plan_directives
+               where  plan='DAYTIME'
+               order  by 1, 2 ;
+
+문제6. scott 으로 접속해서 10초동안 아무것도 안하고 있으면 끊기는지 확인하시오
+
+orcl(SCOTT) > select ename, sal from emp;
+select ename, sal from emp
+*
+ERROR at line 1:
+ORA-02396: exceeded maximum idle time, please connect again
+
+문제7.  그럼 다시 idle time 에 영향을 받지 않도록 계속 끊기지 않겠금 설정하시오
+
+SYSTEM> exec dbms_resource_manager.create_pending_area();
+
+SYSTEM> begin
+             dbms_resource_manager.update_plan_directive(
+              plan=>'DAYTIME',
+              group_or_subplan=>'ONLINE_USERS',
+              new_max_idle_time=> -1);
+            end;
+/
+
+SYSTEM> exec dbms_resource_manager.submit_pending_area();
+
+문제8.  scott 유져가 undo 사용량을 제한 하겠금 설정하시오 !
+
+   new_undo_pool => 10
+
+ 10 kb  제한 받는것 입니다.
+
+SYSTEM> exec dbms_resource_manager.create_pending_area();
+
+SYSTEM> begin
+             dbms_resource_manager.update_plan_directive(
+              plan=>'DAYTIME',
+              group_or_subplan=>'ONLINE_USERS',
+              new_undo_pool=> 10);
+            end;
+/
+
+SYSTEM> exec dbms_resource_manager.submit_pending_area();
+
+문제9. scott 유져로 접속해서 undo 사용량을 과도하게 사용하는 dml 문장을 수행하시오
+
+orcl(SCOTT) >  create  table  sales500
+                    as
+                        select * from sh.sales;
+
+orcl(SCOTT) > delete  from sales500;  
+
+orcl(SCOTT) > delete from sales500;
+delete from sales500
+            *
+ERROR at line 1:
+ORA-30027: Undo quota violation - failed to get 148 (bytes)
+
+문제10. 그럼 다시 scott 유져가 undo 의 제한을 받지 않도록 설정하시오 !
+
+SYSTEM> exec dbms_resource_manager.create_pending_area();
+
+SYSTEM> begin
+             dbms_resource_manager.update_plan_directive(
+              plan=>'DAYTIME',
+              group_or_subplan=>'ONLINE_USERS',
+              new_undo_pool=> -1);
+            end;
+/
+
+SYSTEM> exec dbms_resource_manager.submit_pending_area();

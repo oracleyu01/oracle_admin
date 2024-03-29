@@ -1,0 +1,70 @@
+
+▣ 10.6 export / import 이용해서 데이터 이행을 할 줄 알아야해요
+
+
+  * export / import 방법 4가지 ?
+ 
+  1. table  level  :  특정 테이블만 export / import 수행하기
+  2. user   level  :  scott 과 같이 유져가 가지고 있는 모든 객체를 전부 export/import
+  3. tablespace  level :  tablesapce 의 데이터를 통채로 export/import
+  4. database  level :  database 를 통채로 export/import
+
+■ 실습1. 테이블 레벨로 export/import 하는 실습 
+
+#1. orcl 쪽의 환경으로 export 하시오
+$ . oraenv  
+
+#2. scott 계정의 emp 테이블을 export 하시오 !
+ 
+$ exp  scott/tiger  tables=emp  file=emp.dmp
+$ ls -l  emp.dmp
+
+문제1.  dept 테이블을 dept.dmp 로 export 하시오 !
+
+
+문제2.  scott 계정으로 접속해서  emp 와 dept 를 drop 하시오 !
+
+orcl(SCOTT) > drop table emp;
+
+orcl(SCOTT) > drop table dept;
+
+orcl(SCOTT) > purge recyclebin;
+
+문제3.  emp.dmp 덤프파일을 가지고 다시 db 에 import 하시오 !
+
+$ imp  scott/tiger   tables=emp   file=emp.dmp
+
+orcl(SCOTT) > select count(*) from emp;
+
+  COUNT(*)
+----------
+        14
+
+문제4.  dept.dmp 를 임폴트해서 dept 테이블을 복구하시오 !
+
+$ imp  scott/tiger   tables=dept   file=dept.dmp
+
+$ sqlplus sh/sh
+
+orcl(SH) > select count(*)
+      from sales100;
+
+문제5. sh 계정의 sales100 테이블을 sales100.dmp 로 export 하시오 ! 
+
+$ exp sh/sh tables=sales100 file=sales100.dmp feedback=100
+
+설명: feedback=10 을 쓰면 100건 export 할때마다 점(.) 하나를 찍습니다. 
+
+문제6. sales100.dmp 를 가지고 
+        prod 데이터 베이스의 scott 계정에 sales100 테이블을  임폴트 하시오 !
+
+ 
+$ imp  scott/tiger  tables=sales100  file=sales100.dmp  fromuser=sh  touser=scott
+
+문제7. orcl 쪽의 sh 계정의 products 테이블을 export 해서 prod 쪽의 scott 계정에
+         import 하시오 !
+
+테이블을 하나씩 export 해서 다른 db 로 하나씩 import 하게 되면
+지금 방금 본 에러처럼 bi 의 어느 테이블 없다고 에러가 발생하는 경우가 있습니다.
+그래서 제일 좋은 방법이 tablespace 레벨로 한번에 다 왕창 넘겨버리는게 가장
+좋습니다.

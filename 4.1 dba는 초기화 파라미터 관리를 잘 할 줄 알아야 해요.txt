@@ -1,0 +1,325 @@
+
+▩ 4.1 dba는 초기화 파라미터 관리를 잘 할 줄 알아야 해요
+
+ ■ 초기화 파라미터란 ?   오라클 인스턴스의 구조 정보와 오라클 관련 각종 
+                                 환경 셋팅 정보가 들어있는 파일입니다.
+
+    db를 startup 하면 ---> ① 오라클 인스턴스 ---> ② database  순으로 엽니다.
+
+  오라클 인스턴스를 올릴려면 파라미터 파일이 지정된 장소에 잘 있어야합니다. 
+  그 장소는 $ORACLE_HOME/dbs 밑입니다. 
+  이름은  spfile인스턴스이름.ora 로  되어있습니다.
+
+■ 파라미터 파일 형식의 종류가  2가지 ? 
+
+   1. spfile :    binary file  <--- 직접 열어서 볼 수 없고 직접 열어서 수정할 수 없다.
+
+           내용을 볼려면 v$spparameter 를 조회해야하고 
+           변경하려면 alter system 명령어로 변경해야합니다.       
+ 
+   예: spfile인스턴스이름.ora
+
+   2. pfile  :    text  file  <--- 직접 열어서 볼 수 있고 수정되 vi 편집기로 가능합니다.
+
+  예: init인스턴스이름.ora
+
+
+■ 실습1. 파라미터 파일이 있어야 오라클 인스턴스를 올릴수 있다는 실습
+
+#1.  prod database 의 인스턴스를 먼저 올립니다.
+
+$ .  oraenv 
+ORACLE_SID = [orcl] ? PROD
+ORACLE_HOME = [/home/oracle] ? /u01/app/oracle/product/11.2.0/dbhome_1
+
+[PROD:~]$ ss
+Connected to an idle instance.
+PROD> startup
+
+#2. 오라클 파라미터 파일이 있는 위치로 이동합니다.
+
+ $ cd  $ORACLE_HOME/dbs
+ $ ls -l *.ora
+
+-rw-r--r-- 1 oracle oinstall 2851  5월 15  2009 init.ora
+-rw-r--r-- 1 oracle oinstall  420  2월  2 11:32 initPROD.ora
+-rw-r----- 1 oracle oinstall   35 10월 16  2012 initorcl.ora
+-rw-r----- 1 oracle dba      2560  2월  4 18:09 spfileyys.ora
+
+#3. vi 편집기로 initPROD.ora 를 열어서 내용을 확인합니다.
+
+$ vi  initPROD.ora 
+
+ 저장하고 닫습니다.
+
+#4. 파라미터 파일(initPROD.ora) 의 내용으로 인스턴스가 열린것입니다.
+     만약 initPROD.ora 가  $ORACLE_HOME/dbs 밑에 없었다면 인스턴스가 
+     안열립니다.
+
+SQL> shutdown  immediate
+SQL>  exit;
+$ cd $ORACLE_HOME/dbs
+$ mv  initPROD.ora   initPROD22.ora
+$ ss
+SQL> startup  
+
+문제1.  그럼 다시 파라미터 파일의 이름을 원래데로 돌려놓으시고 PROD 인스턴스를
+          올리시오 !
+
+답:
+$ mv initPROD22.ora initPROD.ora
+
+■ 실습2.  pfile 을 가지고 spfile 을 생성하는 실습 
+
+ 현재 initPROD.ora 라는 pfile 만 있고 spfilePROD.ora 라는 spfile 은 없습니다. 
+ 그래서 initPROD.ora 을 가지고 spfilePROD.ora 를 생성해보겠습니다.
+
+#1.  sqlplus 에서  create spfile from pfile 명령어로 pfile 로 spfile 을 생성하시오
+
+SQL> create  spfile  from  pfile;
+
+#2. 잘 생성되었는지 확인하시오 
+
+PROD> !ls -l *.ora
+-rw-r--r-- 1 oracle oinstall 2851  5월 15  2009 init.ora
+-rw-r--r-- 1 oracle oinstall  420  2월  2 11:32 initPROD.ora
+-rw-r----- 1 oracle oinstall   35 10월 16  2012 initorcl.ora
+-rw-r----- 1 oracle dba      1536  2월  5 11:21 spfilePROD.ora  <-- spfile 
+-rw-r----- 1 oracle dba      2560  2월  4 18:09 spfileyys.ora
+
+이렇게 spfile 과 pfile 이 2개가 있으면 오라클이 좋아하는 파라미터 파일은
+spfile 입니다. spfile 이 우선순위가 높습니다. 
+
+spfile 이 없었을때 인스턴스를 구성한 파라미터 파일이 뭔지 확인합니다.
+
+SQL> show  parameter  spfile
+
+※ value 가 비어있으면 pfile 로 인스턴스를 구성한것 입니다.
+
+#3. 다시 인스턴스를 내렸다 올립니다.
+
+PROD> shutdown immediate
+PROD> startup
+
+#4. pfile 로 인스턴스가 올라왔는지 spfile 로 인스턴스가 올라왔는지 확인합니다.
+
+PROD> show parameter spfile
+
+value 에 값이 비어있지 않고 있으면 spfile 로 인스턴스를 구성한것입니다.
+
+※ 정리:  $ORACLE_HOME/dbs 밑에 spfile 과 pfile 이 같이 있으면 우선순위가 
+           spfile 이 우선순위가 높습니다.
+
+문제1. 다시 인스턴스를 내리고 spfilePROD.ora 를 지우고  다시 인스턴스를 시작시키고
+        spfile 로 인스턴스가 구성되었는지 pfile 로 인스턴스가 구성되었는지 확인하시오!
+
+
+■ 실습3.  dba가 db를 설치하고 나서 반드시 변경해야하는 파라미터값 설정
+
+ db를 내렸다 올려야지만 변경할 수 있는 파라미터 값이 여러개가 있는데
+ 그중에 중요한 파라미터가 하나 있습니다.
+
+ ① db_files  :   database 에서 생성할 수 있는 data file 의 최대갯수 입니다.
+                    data file 의 최대갯수가 왠만한 회사는 다 1000개가 넘어갑니다.
+
+  그래서 이 파라미터의 셋팅값을 처음에 2000개 이상으로 늘려주어야 합니다. 
+
+#1. db_files 파라미터값이 몇으로 셋팅되어 있는지 확인하시오 !
+
+SQL> show  parameter  db_files
+
+200 으로 되어있습니다.
+
+#2. 파라미터 값을 변경하기 위해서 현재 파라미터가 spfile 로 올라왔는지
+    pfile 로 올라왔는지 확인하시오 !
+
+SQL>  show  parameter spfile
+
+설명:  value 에 값이 비어있으므로 pfile 로 올라온것입니다.
+        그럼 직접 pfile (initPROD.ora) 을 열어서 수정해야 합니다.
+
+#3. initPROD.ora 를 열어서 db_files 를 200 에서 2000 으로 수정합니다.
+
+PROD> exit;
+
+[PROD:dbs]$ cd  $ORACLE_HOME/dbs
+[PROD:dbs]$ vi initPROD.ora
+
+맨 아래에 아래의 내용을 적습니다. 그리고 저장하고 나옵니다.
+
+db_files=2000
+
+#4. PROD 인스턴스를 다시 내렸다가 STARTUP 해서 올립니다.
+
+PROD> shutdown  immediate
+
+PROD> startup
+
+#5. db_files 가 2000으로 변경되었는지 확인합니다. 
+
+PROD> show  parameter db_files 
+
+문제1.  이번에는 db_files 를 4000으로 변경하세요 !
+
+
+문제2. (점심시간 문제)  dba 가 반드시 초기에 변경해줘야하는 두번째 파라미터인
+         processes 의 파라미터 값을  100에서 500으로 변경하시오 !
+
+  processes :  오라클에서 한번에 띄울 수 있는 프로세서의 총갯수 
+
+  show  parameter  processes 에서 500으로 변경된 결과를 보여주고 
+  검사 받고 식사하러 가시면 됩니다. 라인 검사입니다.  짝꿍이 서로 도와주세요 ~
+
+■ 실습4.  db 를 안내리고도 파라미터 값을 변경할 수 있는 파라미터가 있어요.
+
+#1.  db 를 restartup 하지 않아도 바로 반영되는 파라미터가 뭔지 조회합니다.
+
+col name for a45
+select  name, issys_modifiable
+   from  v$parameter
+   where   name   in  ('db_files', 'processes', 'db_file_multiblock_read_count');
+
+#2. db_file_multiblock_read_count 의 값을 확인하고 값을 2배로 늘리시오 !
+
+SQL> show  parameter  db_file_multiblock_read_count
+
+#3. db_file_multiblock_read_count 의 값을 52로 변경합니다. 
+
+SQL> alter  system  set db_file_multiblock_read_count = 52  scope=memory;
+
+SQL> show  parameter  db_file_multiblock_read_count
+
+문제1.  open_cursors 라는 파라미터 값을 2배로 늘리시오 !
+
+col name for a45
+col value for a10
+select  name, value, issys_modifiable
+   from  v$parameter
+   where   name  like  '%&name%';
+
+save  parameter.sql 
+@parameter.sql 
+
+alter  system set  open_cursors=100  scope=memory;
+
+show parameter open_cursors
+
+■ 실습5.  오라클에서 권장하는 파라미터 파일인 spfile 로 인스턴스를 관리하는 실습
+
+ 파라미터 파일 2가지 ?   1. init인스턴스.ora :  pfile  
+                                2. spfile인스턴스.ora  :  spfile
+
+#1. PROD 인스턴스를 다시 올리기 위해서 pfile 을 가지고 spfile 을 생성하시오 !
+
+create   spfile  from  pfile;
+
+PROD> !ls $ORACLE_HOME/dbs/*.ora
+/u01/app/oracle/product/11.2.0/dbhome_1/dbs/init.ora
+/u01/app/oracle/product/11.2.0/dbhome_1/dbs/initPROD.ora
+/u01/app/oracle/product/11.2.0/dbhome_1/dbs/initorcl.ora
+/u01/app/oracle/product/11.2.0/dbhome_1/dbs/spfilePROD.ora
+/u01/app/oracle/product/11.2.0/dbhome_1/dbs/spfileyys.ora
+
+#2.  인스턴스를 다시 내렸다 올리세요
+
+SQL> shutdown  immediate
+SQL> startup 
+
+#3. spfile 로 인스턴스가 구성되었는지 확인하세요 
+
+PROD> show parameter spfile
+
+#4. 현재  spfile 파라미터의 db_files 파라미터값이 어떤값으로 셋팅되어있는지
+     확인합니다.
+
+SQL> show parameter db_files 
+
+SQL> select  name, value
+         from  v$spparameter
+         where  name  ='db_files';
+
+4000 으로 셋팅되어있습니다. 
+
+#5. spfile 의 db_files 의 값을 6000으로 변경하시오 !
+
+SQL> alter  system  set  db_files=6000  scope=spfile;
+
+SQL> select  name, value
+         from  v$spparameter
+         where  name  ='db_files';
+
+SQL> show  parameter db_files
+
+#6.  spfile 에 설정된 db_files 의 6000이 메모리에 반영될 수 있도록 인스턴스를
+       내렸다 올리시오 !( 내렸다 올리면 지금 변경된 spfile 의 내용으로 인스턴스를 구성)
+
+SQL> shutdown  immediate
+
+SQL> startup 
+
+PROD> show parameter db_files
+
+문제1.  spfile 로 운영되고 있는 상황에서 processes 의 설정값을  600 으로 변경하시오!
+          ( spfile 도 변경하고 memory 도 변경하고 둘다 변경하세요 )
+
+alter  system  set  processes=600  scope=spfile;
+
+shutdown  immediate
+startup
+
+show  parameter  processes
+
+■ 실습6.  메모리와 spfile  둘다 동시에 변경할 수 있는 파라미터 변경 실습 
+
+#1.  db_block_read_count 파라미터의 설정값을 확인합니다.
+
+select   name, value, issys_modifiable
+  from v$parameter
+  where  name  ='db_file_multiblock_read_count';
+
+#2. db_file_multiblock_read_count 를 64로 변경하는데 메모리와 spfile  두군데 다 변경되게하시오
+
+alter  system  set  db_file_multiblock_read_count = 64  scope=both;
+
+show  parameter  db_file_multiblock_read_count
+
+select  name, value
+  from v$spparameter
+  where  name  ='db_file_multiblock_read_count';
+
+※ 파라미터 파일 관련해서 OCP 문제를 풀기위한 이론 내용 !
+
+ #1.  오라클 인스턴스 메모리 사이즈를 늘리는 파라미터가  정적 파라미터인지
+      동적 파라미터인지 확인합니다. 
+
+    select  name , value, issys_modifiable
+      from v$parameter
+      where    name   in ('sga_target', 'sga_max_size', 'memory_target',          'memory_max_target');
+
+ false 로 되어 있는 파라미터는 정적 파라미터라서  반드시 아래와 같이 수행을 해야
+ 파라미터값을 변경할 수 있습니다.
+
+ alter  system  set  sga_max_size=  278435456   scope=spfile; 
+
+ immediate 로 설정 되어 있는 동적 파라미터는 아래의 명령어 셋다 가능합니다.
+
+ alter  system   set   sga_target =  278435456  scope= memory;
+ alter  system   set   sga_target =  278435456  scope= both;
+ alter  system   set   sga_target =  278435456  ;
+
+문제1.  db_cache_size  파라미터는 정적 파라미터인가 동적 파라미터인가 ?
+
+    select  name , value, issys_modifiable
+      from v$parameter
+      where    name  ='db_cache_size';
+
+1. 아래의 방법은 현재 메모리에만 반영하고 spfile 에 반영안했기 때문에
+   인스턴스를 다시 restart 하면 원래데로 원복됩니다.
+
+alter  system  set db_cache_size= 1024m  scope=memory;
+
+2. 아래의 방법은 현재 메모리에도 반영하고 spfile 에도 반영했기 때문에
+   인스턴스를 다시 restart 해도 변경된 상태로 유지됩니다.
+
+alter  system  set db_cache_size= 1024m  scope=both;
+alter  system  set db_cache_size= 1024m ;

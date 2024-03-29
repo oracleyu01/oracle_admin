@@ -1,0 +1,85 @@
+▩ 5.8 만약 data file 이름을 변경하거나 다른 위치로 이동하고 싶다면?
+
+ ※ 테이블 스페이스를 언제 offline 시켜야하는가 ?
+
+   1.  data file 이름을 변경할 때
+   2.  data file 을 다른 위치로 변경할 때 
+   3.  실수로 data file 을 rm 으로 삭제해서 db 가 안올라올 때
+   4.  data file 이 손상되어서 복구가 필요할 때
+
+■  실습
+
+#1.  ts100 이라는 테이블 스페이스를 /home/oracle 밑에 data file 을 두고 생성합니다.
+
+create  tablespace  ts100
+  datafile  '/home/oracle/ts100.dbf'  size  10m;
+
+#2.  ts100 테이블 스페이스에 emp와 같은 테이블인 emp1000 테이블을 생성합니다.
+
+create  table  emp1000
+tablespace  ts100
+as
+ select *  from emp;
+
+#3.  ts100 테이블 스페이스의 data file 인 /home/oracle/ts100.dbf 를 
+      /u01/app/oracle/oradata/PROD/disk1 밑으로 이동합니다.
+
+@tablespace
+SQL> alter  tablespace  ts100   offline; 
+
+SQL>  select tablespace_name, status
+         from dba_tablespaces;
+
+os 에서 실제로 data file 을 옮겨야합니다.
+$ mv  /home/oracle/ts100.dbf   /u01/app/oracle/oradata/PROD/disk1/ts100.dbf 
+
+SQL>  alter  database  rename file  '/home/oracle/ts100.dbf'  
+            to '/u01/app/oracle/oradata/PROD/disk1/ts100.dbf';
+
+SQL> alter  tablespace  ts100   online;
+
+#4.  emp1000 테이블이 잘 조회되는지 확인합니다.
+
+SQL> @tablespace
+
+SQL> select count(*) from emp1000;
+
+문제1.  다음과 같은 현업의 시나리오를 만들고 해결하시오 !
+          테이블 스페이스를 생성하는데 데이터 파일명에 확장자를 dbf 를 실수로 안쓰고
+          생성하는 시나리오를 일으키시오 !     그리고 해결하세요 !
+
+SQL>  create  tablespace  yys
+            datafile  '/home/oracle/yys01'   size  10m;
+
+SQL>  create  table  emp_yys
+         tablespace   yys
+         as
+          select  * from  emp;
+
+해결은 다시 /home/oracle/yys01 ----------> /home/oracle/yys01.dbf  로 이름 변경
+
+※  테이블 스페이스 offline 시  옵션 3가지 ?
+
+  alter   tablespace   ts01   offline  ;
+
+ 설명:  ts01 테이블 스페이스의 data file 이름을 변경하거나 이동 시키고 싶을때 
+
+  alter   tablespace   ts01  offline   drop;
+
+ 설명:  ts01 테이블 스페이스의 data file 이 손상되어서 복구하고 싶을때 
+
+  alter  tablespace   ts01  offline  immediate; 
+
+ 설명:  ts01 테이블 스페이스의 data file 이 없거나 손상되어서 복구하고 싶을때 
+
+오늘의 마지막 문제.   다음과 같은 상황이 발생했다고 고객사에서 전화가 왔습니다.
+                            고객사에 가기전에 회사 테스트 서버에서 미리 테스트 해보고
+                            갈 수 있도록 아래의 상황을 만들고 해결하시오.
+
+ create   tablespace   insa01
+    datafile  '/u01/app/oracle/oradata/PROD/disk1/insa01.bdf'  size  10m;
+
+ create   tablespace   hr01
+    datafile  '/u01/app/oracle/oradata/PROD/disk1/hr01.bdf'  size  10m;
+
+확장자를 dbf 로 생성해야하는데 bdf 로 생성했습니다.  다시 제대로 dbf 로 돌려놓으세요

@@ -1,0 +1,91 @@
+▩ 3.2 database 종료 모드 4가지를 알고 있어야 해요.                                 
+
+  왜 dba 가 db를 내리는지 ?  
+
+                  1.  오라클의 정적 파라미터 값 변경할 때 
+                  2.  오라클을 upgrade 하거나 patch 를 수행할 때
+                  3.  오라클 데이터베이스를 백업할 때
+
+                                      새로운 접속 허용    현재접속한 세션               현재진행중인 트랜잭션         체크포인트 이벤트
+1. shutdown  normal                접속불가        접속 끊을때 까지 기다려줌   끝날때까지 기다려줌               일으킵니다
+2. shudown   transactional         접속불가        기다리지않고 바로 내림      끝날때까지 기다려줌                일으킵니다
+3. shutdown  immediate            접속불가        기다리지않고 바로 내림      기다리지 않고 바로 내림           일으킵니다.
+4. shutdown  abort                   접속불가       기다리지않고 바로 내림      기다리지 않고 바로 내림           안일으킵니다
+
+
+가장 많이 사용하는 shutdown 옵션은  shutdown   immediate 입니다. 
+shutdown abort 는 정전된거와 똑같아서 가급적 사용을 자제하는게 좋습니다.
+shutdown  normal 은  접속한 유져들이 많은 db 환경에서는 너무 오래걸립니다.
+그래서 사용을 거의 안합니다. 
+
+
+■ 실습1.  shutdown  transactional 실습
+
+#1. putty 창을 3개를 엽니다.
+
+ putty1 창:  shutdown  하는 창
+ putty2 창:  alert log file 을 실시간 모니터링 창
+ putty3 창:   scott 유져로 update 하는 창
+
+설명:  putty3 창이 commit 할 때까지 기다려줍니다. 그리고 commit 하면 db를 내립니다.
+
+■ 실습2.  shutdown immediate 실습
+
+#1. putty 창을 3개를 엽니다.
+
+ putty1 창:  shutdown  하는 창
+ putty2 창:  alert log file 을 실시간 모니터링 창
+ putty3 창:   scott 유져로 update 하는 창
+
+설명:  putty3 창이 commit 할 때까지 기다리지 않습니다. 바로 내립니다. 
+
+commit 안한 데이터는 전부 rollback 해 버립니다.
+commit 을 했는데 db 가 내려갔으면 ?   commit 된 상태로 저장되는겁니다. 
+
+※ shutdown  abort 시 유실되는 데이터가 생길까 ?
+
+  shudown  immediate 를 수행했는데 몇십분이 지나도록 db 를 안내려가는 경우에는
+  그냥 shutdown  abort 해야합니다. 
+
+  신세계 백화점 db 를 shutdown immediate 로 내렸는데 20분이 넘도록 db 가 안내려갔습니다.
+  원인은 개발자들과 운영자들이 data 이행을 하면서 대량의 데이터를 insert 와 update 를 
+  하고 나서 바로 제가 db 를 내렸기 때문입니다.
+
+
+▩ 36.  shutdown 옵션 말고 db 를 내렸다 올리는 다른 방법이 있어요
+
+1. 첫번째 방법:
+
+  startup  force  =   shutdown  abort  +  startup   
+
+2. 클러스터 명령어를 이용해서 :
+
+   1. 클러스터의 상태를 확인 :  
+
+        $ . oraenv  
+            ORACLE_SID = [PROD] ? +ASM
+
+        $ crs_stat  -t 
+
+    2. yys  db를  srvctl  명령어로 내립니다.
+  
+        $ srvctl  stop   database   -d  yys   -o  abort 
+
+        $ crs_stat -t
+
+    3.  yys  db를 srvctl  명령어로 올립니다. 
+
+       $ srvctl   start   database   -d  yys  
+       $ crs_stat -t
+
+    4.  리눅스 서버에 있는 database 관련한 모든 응용 프로그램들을 모두 내리시오 
+
+       $ crs_stop  -all
+
+       $ crs_stat -t
+
+   5.  리눅스 서버에 있는 database 관련한 모든 응용 프로그램들을 모두 올리시오 !
+
+       $ crs_start  -all
+
+       $ crs_stat -t

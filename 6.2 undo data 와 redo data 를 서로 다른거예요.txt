@@ -1,0 +1,72 @@
+▣ 6.2 undo data 와 redo data 를 서로 다른거예요
+
+
+
+ - undo  data :    취소를 하기 위한 data
+     ↓
+   하지 않다
+
+ - redo   data :    복구를 하기 위한 data
+    ↓
+   다시 하다
+
+  KING 의 월급을 5000 에서 0 로 변경하고 아직 commit 을 하지 않은 상태입니다.
+ 그리고 이 상태에서 dbwr 메모리의 dirty buffer 를 table sement 에 내려썼고
+ undo buffer 의 내용을  undo segment 에 내려썼습니다.
+  그리고 lgwr 는 이미  king 의 데이터를 변경했다는 redo data 를 redo log file 에 
+  내려쓴 상태입니다.
+
+  이 상태에서 갑자기 shutdown abort 를 했다면  king 의 data 는 어떻게 복구될까?
+
+  redo log file 에  redo data 도 있고 undo segment 에 undo data 도 있으므로 
+  원래 5000 으로 완전히 복구 할 수 있습니다. 
+
+ ※ dba 를 위한 팁(tip) !   걱정 말고 shutdown  abort 하세요 ~
+                                  자동으로 복구 됩니다.
+
+■ 실습:  undo tablesapce 안에 undo segment 들이 얼마나 있는지 확인하는 실습 
+
+1. 나의 undo tablespace 가 무엇인지 확인합니다.
+
+ show  parameter  undo
+ @tablespace
+
+2. 지금 undo tablespace 에 활성화된 undo segment 가 몇개 있는지 확인합니다.
+
+ select  *
+   from v$rollname;
+
+ 상황에 따라서 갯수가 자동으로 늘어났다 줄어들었다 합니다. 
+
+3. undo segment 가 어느 테이블 스페이스에 있는지 확인합니다. 
+
+select  segment_name,  status,  tablespace_name
+   from  dba_rollback_segs;
+
+4. 새로운 undo  tablespace 를 생성합니다.
+
+ 왜 새로운 undo tablespace 를 만드는가?   지금 임시로 대량의 DML 작업을 수행해야합니다.
+                                                        기존 UNDO TABLESPACE 로는 못버틸것 같다.
+                                                        그럴때 크게 하나 만들어주고 사용하면됩니다.
+
+ create  undo  tablespace  undotbs2
+     datafile   '/home/oracle/undotbs3.dbf'  size  50m;  
+
+5. 현재 사용할 undo tablespace 를 4번에서 생성한 undo tablespace 로 지정합니다.
+
+show  parameter undo_tablespace
+
+alter   system  set  undo_tablespace=undotbs2  scope=both;
+
+show  parameter undo_tablespace
+
+6. 현재 활성화된 undo segment 가 어느 테이블 스페이스에 있는지 확인합니다.
+
+select  segment_name,  status,  tablespace_name
+   from  dba_rollback_segs;
+
+점심시간 문제:  다시 새로운 undo tablespace 를 undotbs3 으로 생성하고 
+                      undotbs3 undo tablespace 의 undo segment 들이 활성화 되었는지
+                    확인하시오 !  (  활성화 된 segment 들 보여주고 검사 받으세요 )
+
+* 언두 data 와 redo data 가 어떻게 다른지 책에 나온 설명 p 10-7

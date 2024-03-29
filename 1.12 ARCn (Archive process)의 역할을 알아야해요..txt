@@ -1,0 +1,113 @@
+
+▩ 1.12 ARCn (Archive process)의 역할을 알아야해요.
+
+ 리두 로그 파일을 백업하는 프로세서 입니다. 
+
+  update  emp
+    set  sal = 0
+   where ename='SCOTT';
+
+■ 실습:
+
+#1.  데이터 베이스 모드가 아카이브 모드인지 노 아카이브 모드인지 확인하시오 !
+
+SQL>  archive log list 
+
+#2.  아카이브 모드로 변경하기 위해서 db 를 정상 종료 합니다.
+
+SQL> shutdown   immediate
+
+#3. startup 단계를 mount 단계로 올립니다.
+
+SQL> startup  mount
+
+SQL> select  status  from v$instance;
+
+#4.  데이터베이스 모드를 archive 모드로 변경합니다.
+
+SQL> alter  database  archivelog;
+
+#5.  mount 단계에서 open 단계로 db 를 올리시오 
+
+SQL> alter   database  open;
+
+#6. 아카이브 모드로 변경되었는지 확인합니다.
+
+SQL> archive log list
+
+Database log mode              Archive Mode
+Automatic archival             Enabled
+Archive destination            USE_DB_RECOVERY_FILE_DEST
+Oldest online log sequence     43
+Next log sequence to archive   45
+Current log sequence           45
+
+■ 실습2.  리두 로그 파일 관련 실습 
+
+#1. 리두 로그 파일의 그룹의 갯수를 확인하시오 !
+
+SQL>  select  group#, status, sequence#
+            from  v$log; 
+
+#2. 현재 쓰고 있는 리두 로그 그룹을 다음 그룹으로 변경하시오 !  ( log switch)
+
+SQL>  alter  system  switch  logfile;
+
+SQL>  select  group#, status, sequence#
+            from  v$log; 
+
+#3. 로그 스위치를 일으키고 현재 쓰고 있는 리두로그 그룹이 다음 그룹으로 넘어갔는지 확인
+
+SQL> alter system switch logfile;
+
+SQL> @log
+
+    GROUP# STATUS            SEQUENCE#
+---------- ---------------- ----------
+         1 ACTIVE                   46
+         2 CURRENT                47
+         3 ACTIVE                   45
+
+■ 실습3.  아카이브 리두 로그 파일이 생성되었는지 확인하는 방법
+
+#1.  먼저 아카이브 리두로그 파일의 위치가 어디인지 확인하시오 !
+
+SQL>  archive  log  list 
+
+#2. 아카이브 로그 파일의 위치를 알고 있는 파라미터를 조회합니다.
+
+SQL> show  parameter  db_recovery_file_dest 
+
+db_recovery_file_dest                string        +FRA
+
+#3. +FRA 라는 ASM 디스크 그룹 위치로 이동합니다. 
+
+새로운 터미널 창을 엽니다. 
+
+ORACLE_SID = [orcl] ? +ASM
+The Oracle base for ORACLE_HOME=/u01/app/oracle/product/11.2.0/grid is /u01/app/oracle
+[+ASM:admin]$
+[+ASM:admin]$ asmcmd
+ASMCMD>
+ASMCMD> ls
+DATA/
+FRA/
+
+문제1. 다시 노아카이브 모드로 변환하시오 !
+
+답:
+#1. db 를 정상종료 합니다.
+SQL> shutdown immediate
+
+#2. db 를 마운트로 올립니다.
+SQL> startup  mount
+
+#3. 노아카이브모드로 변환합니다.
+SQL> alter  database  noarchivelog;
+
+#4. db를 올립니다.
+SQL> alter  database   open;
+
+#5. 아카이브 모드를 확인합니다.
+SQL> archive log list
+

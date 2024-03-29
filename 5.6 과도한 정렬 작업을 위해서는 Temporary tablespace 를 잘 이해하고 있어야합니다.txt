@@ -1,0 +1,201 @@
+▩ 5.6 과도한 정렬 작업을 위해서는 Temporary tablespace 를 잘 이해하고 있어야합니다
+
+그림설명: https://cafe.daum.net/oracleoracle/So33/300
+
+ select   ename, sal
+   from  emp
+  order by  sal desc; 
+
+ 평상시와는 다르게 과도한 정렬 작업을 해야한다면 temp tablespace 가 필요합니다.
+
+ ※ 정렬을 일으키는 SQL ?  1.  order  by
+                                    2.  create  index 생성
+                                    3.  sort  merge  join 
+                                    4.  minus
+                                    5.  intersect
+                                    6.  union 
+
+  ※ temporary  tablespace 를 사용하는  SQL ?  1.  정렬을 일으키는 SQL
+                                                              2.  with
+                                                              3.  임시 테이블(temporary table)
+
+  과도한 정렬을 일으키면 temporary tablespace 가 full 이 나고 더 이상 정렬 SQL이 수행
+  안되고 에러가 나면서 실패합니다. 
+
+■ 실습
+
+#1.  테이블 스페이스를 조회하는데 테이블 스페이스의 속성을 확인해서 조회하시오 !
+
+ select  tablespace_name,  contents
+    from   dba_tablespaces;
+
+
+#2. temporary tablespace 의 전체 사이즈와 사용량을 조회하는 쿼리를 수행하시오 !
+
+-- 임시 테이블스페이스의 전체 사이즈와 사용량 함께 조회
+
+select d.tablespace_name, 
+       d.total_mb, 
+       (d.total_mb - t.free_mb) as used_mb, 
+       t.free_mb
+from (select tablespace_name, 
+             sum(bytes)/1024/1024 as total_mb 
+      from dba_temp_files 
+      group by tablespace_name) d,
+     (select tablespace_name, 
+             sum(bytes_free)/1024/1024 as free_mb 
+      from v$temp_space_header 
+      group by tablespace_name) t
+where d.tablespace_name = t.tablespace_name;
+
+save  temp_space.sql
+@temp_space.sql
+
+#3.  과도한 정렬 작업을 일으키기 위한 테이블을 생성합니다.
+
+DROP  TABLE  ORDERS;
+
+CREATE TABLE ORDERS
+AS
+WITH TEMP_ORDERS AS(
+SELECT /*+ MATERIALIZE */
+       TRUNC(DBMS_RANDOM.VALUE(1, 2193)) ORDER_DATE_CD
+     , DECODE(TRUNC(DBMS_RANDOM.VALUE(0, 2)), 1, 'direct', 'online') ORDER_MODE
+     , 'C'||LPAD(TRUNC(DBMS_RANDOM.VALUE(1, 50001)), 5, '0') CUSTOMER_ID
+     , 'E'||LPAD(TRUNC(DBMS_RANDOM.VALUE(1, 643)), 3, '0') EMPLOYEE_ID
+     , TRUNC(DBMS_RANDOM.VALUE(1, 11)) ORDER_STATUS
+     , 0 ORDER_TOTAL
+  FROM DUAL
+CONNECT BY LEVEL <= 100000)
+SELECT 'O'||LPAD(ROW_NUMBER() OVER(ORDER BY A.ORDER_DATE_CD), 8, '0') ORDER_ID
+     , TO_DATE(B.DATE_ID||LPAD(TRUNC(DBMS_RANDOM.VALUE(0, 24)), 2, '0')||
+               LPAD(TRUNC(DBMS_RANDOM.VALUE(0, 60)), 2, '0')||
+               LPAD(TRUNC(DBMS_RANDOM.VALUE(0, 60)), 2, '0'), 'YYYYMMDDHH24MISS') ORDER_DATE
+     , ORDER_MODE, CUSTOMER_ID, EMPLOYEE_ID, ORDER_STATUS, ORDER_TOTAL  
+  FROM TEMP_ORDERS A
+     , (SELECT /*+ NO_MERGE */ ROWNUM DATE_CD
+             , YYYY||MM||DD DATE_ID
+          FROM (SELECT LPAD(ROWNUM,2,'0') MM FROM DUAL CONNECT BY LEVEL <= 12)
+             , (SELECT LPAD(ROWNUM,2,'0') DD FROM DUAL CONNECT BY LEVEL <= 31)
+             , (SELECT ROWNUM + 2006 YYYY FROM DUAL CONNECT BY LEVEL <= 6)
+         WHERE DD<=DECODE(MM,'01','31','03','31','04','30','05','31','06','30',
+                             '07','31','08','31','09','30','10','31','11','30','12','31',
+                             '02',DECODE(MOD(TO_NUMBER(YYYY),4),0,'29','28')) ) B
+ WHERE A.ORDER_DATE_CD = B.DATE_CD;
+
+#4.  위의 테이블을 이용해서 정렬작업을 일으키면 temporary tablespace 의 
+      사용량이 늘어나는지 확인하시오 !
+
+  alter  session  set  workarea_size_policy=manual;
+
+  alter  session  set  sort_area_size = 10;
+
+  select  /*+ leading(a b) use_merge(b) */ a.*, b.*
+     from  orders  a,  orders  b
+     where   a.customer_id = b.customer_id
+    order  by  a.customer_id  desc; 
+
+@temp_space.sql
+
+TABLESPACE   TOTAL_MB    USED_MB    FREE_MB
+---------- ---------- ---------- ----------
+TEMP               69         69          0
+
+#5. 또 다른 과도한 정렬 작업을 일으키게 되면 수행한 sql이 실패하는지 확인하시오 !
+
+  select  /*+ leading(a b) use_merge(b) */ a.*, b.*
+     from  orders  a,  orders  b
+     where   a.customer_id = b.customer_id
+    order  by  a.customer_id  desc; 
+
+ 에러가 발생했다고 가정하고 해결해보겠습니다.
+
+문제1. temp 테이블 스페이스의 공간을 늘리시오 !
+
+  select  file_name
+    from  dba_temp_files; 
+
+ alter   tablespace   temp
+   add   tempfile  '/u01/app/oracle/oradata/PROD/disk3/temp02.dbf'  size 10m;
+
+ @temp_space.sql 
+
+ 과도한 정렬을 일으키는 SQL을 수행하기전에 반드시 temporary tablespace 여유공간이
+ 있는지 확인하고 정렬 작업을 해야 2번 일하지 않습니다. 
+
+문제2.  temporary  tablespace 의 공간을 더 늘리시오.  
+          temp  data file 을  2개더 추가해서 여유 공간을 충분히 확보하시오 !
+          temp data file 의 크기는 10m 씩 추가하세요 !
+
+  추가 작업
+  @temp_space.sql
+
+  select  file_name  from dba_temp_files;
+
+답:
+ alter   tablespace   temp
+   add   tempfile  '/u01/app/oracle/oradata/PROD/disk3/temp03.dbf'  size 10m;
+
+ alter   tablespace   temp
+   add   tempfile  '/u01/app/oracle/oradata/PROD/disk3/temp04.dbf'  size 10m;
+
+
+PROD>  select file_name from dba_temp_files;
+
+FILE_NAME
+---------------------------------------------
+/u01/app/oracle/oradata/PROD/disk3/temp01.dbf
+/u01/app/oracle/oradata/PROD/disk3/temp02.dbf
+/u01/app/oracle/oradata/PROD/disk3/temp03.dbf
+/u01/app/oracle/oradata/PROD/disk3/temp04.dbf
+
+위와 같이 이미 추가한 데이터 파일은 추가된 상태로 그냥 남아있는것입니다.
+
+※ dba 를 위한 팁 !  
+
+ 아주 큰 정렬작업을 지금 딱 1번만 하면되고 평상시에는 크게 할일 이 없다면
+ 지금 바로 할 정렬작업을 위한 또 다른 temporary 테이블 스페이스를 생성하고 
+사용하면 됩니다. 그리고 나서 나중에 원래 temporary 테이블 스페이스고 원복 시키면 됩니다.
+
+무분별하고 크게 만든 temporary tablespace 를 정리하고 싶다면 새로운 temporary tablespace
+를 만들고 그 테이블 스페이스는 default  temporary tablespace 로 사용하면 됩니다.
+
+■ 실습
+
+#1. 현재 사용중인 default temporary tablespace 가 뭔지 확인합니다.
+
+PROD>  @dbp.sql 
+
+#2. temp2 라는 temporary tablespace 를 10m 로 생성합니다.
+
+PROD> create  temporary   tablespace   temp2
+              tempfile  '/u01/app/oracle/oradata/PROD/disk3/temp2_01.dbf'   size 10m;
+
+#3. temp2 를 default  temporary tablespace 로 지정합니다.
+
+PROD> alter  database  default  temporary  tablespace  temp2;
+
+PROD> @dbp
+
+#4. 기존 temporary tablespace 인 temp 를 drop 하시오 !
+
+PROD> drop  tablespace  temp  including  contents  and  datafiles;
+
+문제3.  temp3 이라는 temporary tablespace 를 사이즈 10m 로 만들고 
+          temp3 을 defalut temporary tablespace 로 지정후에 기존 temp2 테이블 스페이스를
+          drop  하시오 !
+
+#1. temp3 라는 temporary tablespace 를 10m 로 생성합니다.
+
+PROD> create  temporary   tablespace   temp3
+              tempfile  '/u01/app/oracle/oradata/PROD/disk3/temp3_01.dbf'   size 10m;
+
+#2. temp3 를 default  temporary tablespace 로 지정합니다.
+
+PROD> alter  database  default  temporary  tablespace  temp3;
+
+PROD> @dbp
+
+#3. 기존 temporary tablespace 인 temp2 를 drop 하시오 !
+
+PROD> drop  tablespace  temp2  including  contents  and  datafiles;

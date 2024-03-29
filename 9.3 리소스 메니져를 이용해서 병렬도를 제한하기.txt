@@ -1,0 +1,73 @@
+
+▣ 9.3 리소스 메니져를 이용해서 병렬도를 제한하기
+
+ 병렬작업을 한다는 것은 ?
+  
+   select  /*+ parallel(emp,4) */  ename, sal
+       from  emp; 
+
+  하나의 프로세서가 emp 테이블을 full scan 하는게 아니라 4개의 프로세서가
+   나눠서 emp 테이블을 full scan 을 하니까 속도가 빨라집니다.
+   병렬작업이 지원되려면 오라클을 반드시 enterprise edition 으로 설치해야합니다.
+
+   8코어 ~ 24코어, 오라클 1코어 5억씩 입니다. 24코어를 쓰면 120억을 오라클 설치
+   비용으로 내야하고 매년 구입 가격의 3%를 유지보수비로 내야하빈다.
+
+■ 실습.
+
+ 1. 병렬 쿼리를 실행하고 병렬 프로세서들이 잘 떠있는지 확인하시오 !
+
+ SCOTT> select /*+  parallel(s1,2) parallel(s2,2) */  count(*)
+              from sh.sales  s1, sh.sales  s2;
+
+
+ 2. sys 유져에서 다음과 같이 병렬 프로세서들이 떠있는지 확인하시오 !
+
+ SYS>  col  program  for  a25
+ SYS>  col process  for  a10
+ sys>  select  process, program
+            from  v$session
+        where  program  like  '%(P0%';
+
+ sys> save pa.sql
+
+3. scott 유져가 병렬도를 2 이상으로 지정하지 못하게 하시오 !
+
+SYSTEM>  exec dbms_resource_manager.create_pending_area();
+
+SYSTEM> begin
+          dbms_resource_manager.update_plan_directive(
+          plan=>'DAYTIME',
+          group_or_subplan=>'ONLINE_USERS',
+          new_parallel_degree_limit_p1 =>2);
+        end;
+/
+
+SYSTEM>  exec dbms_resource_manager.submit_pending_area();
+
+SQL> select plan, group_or_subplan, cpu_p1, cpu_p2,  
+          parallel_degree_limit_p1 dop, max_idle_blocker_time block_t, 
+          max_idle_time, undo_pool
+     from dba_rsrc_plan_directives
+     where   plan='DAYTIME'
+        order by 1,2;
+
+
+ SCOTT> select /*+  parallel(s1,6) parallel(s2,6) */  count(*)
+        from sh.sales  s1, sh.sales  s2;
+
+ system>@pa.sql
+
+문제1.  다시 병렬도의 제한을 받지 않겠금 설정하시오 !
+
+SYSTEM>  exec dbms_resource_manager.create_pending_area();
+
+SYSTEM> begin
+          dbms_resource_manager.update_plan_directive(
+          plan=>'DAYTIME',
+          group_or_subplan=>'ONLINE_USERS',
+          new_parallel_degree_limit_p1 =>-1);
+        end;
+/
+
+SYSTEM>  exec dbms_resource_manager.submit_pending_area();

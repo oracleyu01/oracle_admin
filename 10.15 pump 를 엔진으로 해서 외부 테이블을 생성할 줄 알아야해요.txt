@@ -1,0 +1,80 @@
+
+▣ 10.15 pump 를 엔진으로 해서 외부 테이블을 생성할 줄 알아야해요
+
+
+#1. orcl 쪽 scott 유져에서 emp 와 dept 테이블을 조인한 결과로
+     pump 파일을 생성하면서 바로 외부 테이블을 생성합니다. 
+
+scott>  create  table  ext_emp_dept
+          ( ename, sal, loc )
+          organization  external
+          ( 
+             type   oracle_datapump
+             default  directory  emp_dir
+             location('empdept.dmp')  )
+       as 
+               select  e.ename, e.sal, d.loc
+                 from  emp  e, dept  d
+                 where  e.deptno = d.deptno; 
+
+scott> select * from ext_emp_dept;
+
+$ ls -l empdept.dmp
+-rw-r----- 1 oracle dba 12288  2월 26 15:31 empdept.dmp
+
+문제1.  emp 와 dept 와 salgrade 를 조인해서 이름과 월급과 부서위치와
+          grade 를 출력하는 external 테이블을 ext_e_grade 로 생성하시오 !
+          펌프 파일은  empgrade.dmp 라는 이름으로 생성되게 하시오 !
+
+scott>  create  table  ext_e_grade
+          ( ename, sal, loc, grade )
+          organization  external
+          ( 
+             type   oracle_datapump
+             default  directory  emp_dir
+             location('empgrade.dmp')  )
+       as 
+               select  e.ename, e.sal, d.loc, s.grade
+                 from  emp  e, dept  d, salgrade  s
+                 where  e.deptno = d.deptno  and  e.sal  between s.losal and s.hisal;
+
+문제2.  empgrade.dmp 파일을 가지고 yys2 쪽에 external 테이블을 생성하시오 !
+
+yys2(SCOTT) > select * from dba_directories;
+
+ YYS2_DIR      /home/oracle/pump_yys2
+
+[yys2:~]$ cp  empgrade.dmp  /home/oracle/pump_yys2/empgrade.dmp
+
+yys2(SCOTT) >  create  table  ext_e_grade
+                  (   ename    varchar2(50),
+                      sal       number(10),
+                      loc      varchar2(50),
+                     grade    number(10) )
+                  organization   external
+                  (
+                       type   oracle_datapump
+                       default   directory   yys2_dir 
+                       location  ('empgrade.dmp')
+                   );
+
+문제3.  지금 방금 생성한 ext_e_grade 의 sal 컬럼에 인덱스를 생성하시오 !
+
+yys2(SCOTT) >   create  index  ext_e_grade_sal
+                        on  ext_e_grade(sal);
+
+ORA-30657: operation not supported on external organized table
+  
+문제4. (ocp 시험문제)  ext_e_grade 에서 월급이 3000 이상의 모든 컬럼의 데이터를 조회하는
+          쿼리문으로 view 를 생성하면 되는지 확인하시오 !
+          ( view 이름은 ext_e_grade_view )
+
+create  view   ext_e_grade_view
+as
+   select  *
+    from  ext_e_grade
+    where  sal >= 3000;
+
+select  * from  ext_e_grade_view; 
+
+설명:  view 도 만들어지고 조인도 가능한데  dml 이 안되고 인덱스 안만들어집니다.

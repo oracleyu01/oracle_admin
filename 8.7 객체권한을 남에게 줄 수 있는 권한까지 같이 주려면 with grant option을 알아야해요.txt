@@ -1,0 +1,40 @@
+▣ 8.7 객체권한을 남에게 줄 수 있는 권한까지 같이 주려면 with grant option을 알아야해요
+
+ 1. with  admin  option : 시스템 권한을 남에게 줄 수 있는 권한을 같이 줄 때 사용
+ 2. with  grant   option :  객체 권한을 남에게 줄 수 있는 권한을 같이 줄 때 사용 
+
+  여기서 with grant option 은 최초로 권한을 줬던 유져에게 뺐으면 전부 다 취소됩니다. 
+
+■ 실습
+
+1. scott 계정에서 martin1 에게 dept 테이블을 select 할 수 있는 권한을 부여합니다.
+   이때 with grant option 을 써서 부여합니다.
+connect  scott/tiger
+grant  select  on dept  to  martin1  with  grant  option;
+create  public  synonym  dept   for   scott.dept;
+
+2. martin1 에서 martin2 에게  scott 계정의 dept 테이블을 select 할 수 있는 권한을
+   부여합니다.
+connect  martin1/tiger
+grant  select  on  dept  to  martin2;
+
+3. scott 계정에서 martin1 에게 부여했던 dept 테이블을 select 할 수 있는 권한을 취소
+   합니다.
+connect scott/tiger
+revoke  select  on  dept  from  martin1;
+
+4.  martin1 계정에서 가지고 있는 객체 권한을 확인합니다.
+connect martin1/tiger
+@obj_priv.sql
+
+5.  martin2 계정에서 가지고 있는 객체 권한을 확인합니다. 
+connect martin2/tiger
+@obj_priv.sql
+
+※ 객체권한을 전부 취소 됩니다 
+
+문제1.  scott 계정에서 martin1 에게  dept 테이블을 insert,update,delete 할 수 있는
+          권한을 넣어주고 martin1 에서 martin2 에게 dept 테이블을 insert,udpate,delete
+          할 수 있는 권한을 넣어주고 scott 계정에서 martin1 에게 주었던 dept 테이블에
+          insert,update,delete 할 수 있는 권한을 뺏으면 martin2 는 어떻게 되는지
+          확인하시오 !

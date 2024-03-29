@@ -1,0 +1,47 @@
+
+▩ 4.2 alter system 과 alter session 의 차이는 ?
+
+ 1. alter  system 명령어로 변경하는것은 database 전체에 영향을 미치는 명령어
+
+ 2. alter  session 명령어는 현재 접속한 특정 세션 하나에만 영향을 미치는 명령어 
+
+■ 실습1.  alter  sessoin 명령어로 날짜 형식 변경하시오 !
+
+#1.  현재 내가 접속한 세션의 날짜 형식을 확인하시오 !
+
+ select   parameter,  value
+   from  nls_session_parameters
+  where  parameter  like  '%DATE%';
+
+NLS_DATE_FORMAT                DD-MON-RR
+
+#2. 우리나라 날짜 형식으로 변경하는데 시스템 전체에 영향을 주지는 말고
+     내가 접속한 세션에서만 영향을 주게 하시오 !
+
+SQL> connect  scott/tiger
+
+SQL> select  ename, hiredate  from emp; 
+
+SQL> alter  session  set  nls_date_format='RR-MM-DD';
+
+ select   parameter,  value
+   from  nls_session_parameters
+  where  parameter  like  '%DATE%';
+
+SQL> select  ename, hiredate  from emp; 
+
+문제1.  위와 같이 상황을 만들어 놓고  새로운 터미널창을 열여서 SCOTT 으로 접속해서
+          이름과 입사일을 조회하시오 !
+
+
+※ dba 를 위한 팁!   대량의 데이터의 정렬작업을 빠르게 하기위한 SQL팁 !
+
+alter  session  set  workarea_size_policy =manual;
+alter  session  set  sort_area_size = 1000000000;
+
+대량의 데이터 정렬 SQL 수행
+
+alter  system 이 아니라 alter  session 으로 수행했기 때문에 내 세션에서만
+영향을 주는 명령어 입니다. 
+
+

@@ -1,0 +1,58 @@
+
+▩ 7.1 오라클에 접속하려면 4가지 정보를 알아야 해요
+
+    client ------------------------------------------>  server  
+    4가지 정보                                           4가지 정보
+
+       tnsname.ora                                        listener.ora
+
+  그림캡쳐
+
+ 
+
+▩ 예제42. sqldeveloper 나 dbever 로 오라클에 접속하려면 리스너 통해서 접속해야해요.
+
+ p6-6 페이지 그림 
+ 
+그림 설명:  sqldeveloper 나  dbever 로 접속할 때 접속이 안되고 에러가 발생하면
+               반드시  서버에 리스너가 잘 떠있는지 확인해야합니다.
+
+질문1. 리스너가 서버에 안떠있어서 에러가 발생합니다.  <--- 해결가능한 질문
+
+어리석은 질문. 이거 안되는데 어떻게 해야할까요 ? (타산지석)
+   
+■ 실습:
+
+#1. 데이터베이스 서버에 리스너가 떠있는지 확인합니다.
+
+[orcl:~]$ lsnrctl status
+
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=ipc)(KEY=EXTPROC1521)))
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=192.168.19.60)(PORT=1521)))
+Services Summary...
+Service "+ASM" has 1 instance(s).
+  Instance "+ASM", status READY, has 1 handler(s) for this service...
+Service "PROD" has 1 instance(s).
+  Instance "PROD", status READY, has 1 handler(s) for this service...
+Service "orcl.us.oracle.com" has 1 instance(s).
+  Instance "orcl", status READY, has 1 handler(s) for this service...
+Service "orclXDB.us.oracle.com" has 1 instance(s).
+  Instance "orcl", status READY, has 1 handler(s) for this service...
+Service "yys" has 1 instance(s).
+  Instance "yys", status READY, has 1 handler(s) for this service...
+Service "yysXDB" has 1 instance(s).
+  Instance "yys", status READY, has 1 handler(s) for this service...
+The command completed successfully
+[orcl:~]$
+
+#2. 리스너 통해서 접속이 되는지 확인합니다. 
+
+$ sqlplus  scott/tiger@192.168.19.60:1521/orcl.us.oracle.com
+
+#3. 리스너는 정상인제 위와 같이 접속이 안되면 ping 이 나가는지 확인합니다.
+
+$ ping 192.168.19.60
+
+문제1.  짝꿍의 아이피 주소로 ping 이 나가는지 확인하시오 !
+
+$ ping 192.168.19.199

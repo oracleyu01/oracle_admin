@@ -1,0 +1,204 @@
+
+▣ 10.8 tablespace level 로 export/import 를 할 줄 알아야해요
+
+  데이터 이행  vs  이과의 차이의 개념을 명확하게 알고 있어야합니다.
+
+- 데이터 이행 -->  데이터를 이동하면서 데이터의 약간이라도 변경을 가하는 작업을
+                         수행했다면 이행
+
+ 예: 서브쿼리를 사용한 insert 문으로 데이터를 이동
+
+- 데이터 이관 -->  통채로 데이터를 넘기는게 이관입니다. 
+
+완전하게 데이터 이행을 완료한다는 것은 다음 8가지가 다 넘어가야한다는 것입니다.
+
+ 1.  table
+ 2.  view
+ 3.  sequence
+ 4. synonym
+ 5. index
+ 6. 권한 
+ 7. 유져
+ 8. 기타
+
+2.3 테라를 넘긴다고 한다면 데이터 이행이면 몇일 걸리는데 
+데이터 이관이면 하루면 됩니다.
+
+■ 실습1. 테이블 스페이스 레벨로 export / import 
+
+ 이력서에 보유기술:  테이블 스페이스 레벨로 데이터 이관 
+
+           PROD ----------------------------->    yys
+
+#1. orcl db 와 asm 인스턴스를 모두 내립니다. 
+$ ss
+orcl(SYS) > shutdown immediate
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+
+[orcl:~]$ . oraenv
+ORACLE_SID = [orcl] ? +ASM
+
+[+ASM:~]$ sqlplus / as sysasm
+
+SQL> shutdown immediate
+
+#2. prod 와 yys db 를 올립니다.
+
+[+ASM:~]$ . oraenv
+ORACLE_SID = [+ASM] ? PROD
+PROD(SYS) > startup
+
+[PROD:~]$ . oraenv
+ORACLE_SID = [PROD] ? yys
+
+yys(SYS) > startup
+
+[yys:~]$ . oraenv
+ORACLE_SID = [yys] ? PROD
+
+
+#3. 작업전 반드시 확인해야할 사항을 체크 합니다.
+
+※ 작업전 반드시 확인해야할 사항 체크 !
+
+ PROD DB 와 YYS DB 간의 character  set 이 서로 일치하는지 확인해야합니다.
+
+PROD(SYS) > @dbp
+
+NLS_CHARACTERSET                    US7ASCII
+
+yys(SYS) > @dbp
+
+NLS_CHARACTERSET                    KO16MSWIN949
+
+[orcl:~]$ . oraenv
+ORACLE_SID = [orcl] ? +ASM
+[+ASM:~]$ sqlplus / as sysasm
+SQL> startup
+
+※  character set 이 서로 틀려서  서로 맞춰줘야하므로  
+    prod 와 yys2  를 가지고 실습을 하겠습니다.
+
+ prod 와 yys2 만 열어놓고 나머지 인스턴스는 모두 내리세요 ~
+
+ yys2 가  없는 사람들은 yys2 를 생성을 해야합니다.
+
+ PROD 와 yys2 의 character set 이 서로 같은지 확인을 해야합니다.
+ 현업에서 서로 다르면 데이터 이관을 포기하고 데이터 이행을 합니다.
+
+ character set 을 변경할 수 있는데 변경하지 않습니다.
+ charaterset 을 변경하면 기존에 저장되어 있는 데이터가 ?? 로 나올 수 있기
+ 때문에 data 가 들어있는 기존 db의 charaterset 을 변경하지 않고
+ 새로 만든 db 의 character set을 기존 db 와 똑같이 맞춰서 생성합니다. 
+
+ ※ 현업에서의 db 엔지니어의 tip !
+
+  db 생성하기 전에 고객에게 반드시 기존 db 의 charaterset 과 똑같이 
+  맞춰줘야한다는 것을 애기해줘야합니다. (데이터 이관할 때는 똑같아야합니다.)
+
+#4. prod db 에서 ts7100 이라는 테이블 스페이스를 생성합니다.
+
+PROD(SYS) > @tablespace
+
+ /u01/app/oracle/oradata/PROD/disk1/   <--- 위치 확인
+
+PROD(SYS) > create  tablespace  ts7100
+                datafile  '/u01/app/oracle/oradata/PROD/disk1/ts7100.dbf' size  5m;
+                   
+#5. scott 으로 접속해서 ts7000 테이블 스페이스에 emp7100 테이블을 생성합니다.
+
+PROD(SCOTT) >  connect scott/tiger
+
+PROD(SCOTT) > create  table  emp7100
+                    ( empno   number(10),
+                      ename   varchar2(20) )
+                     tablespace  ts7100;
+
+#6. emp7001 에 데이터를 입력을 반복합니다. 
+
+PROD(SCOTT) > insert  into  emp7100 values(1111,'aaa');
+PROD(SCOTT) > commit;
+PROD(SCOTT) > insert  into  emp7100 values(1111,'aaa');
+PROD(SCOTT) > commit;
+PROD(SCOTT) > insert  into  emp7100 values(1111,'aaa');
+PROD(SCOTT) > commit;
+
+#7. ts7100 테이블 스페이스를 read  only 로 변경합니다.
+
+PROD(SYS) > connect  / as sysdba
+
+PROD(SYS) > alter  tablespace  ts7100  read  only;
+
+PROD(SYS) >  select  t.name, d.enabled
+                     from  v$tablespace   t, v$datafile   d
+                     where  t.ts# = d.ts#;
+
+#8. ts7100 테이블 스페이스를 tablespace 단위로 export 합니다.
+
+$ exp transport_tablespace=y tablespaces=ts7100 file=ts7100.dmp
+
+ 이렇게 수행하면 유져이름과 패스워드를 물어봅니다. 
+
+ 유져이름:  sys as sysdba
+ 패스워드:   oracle
+
+#9. 2개의 파일을 준비합니다. (export 파일과 ts7100.dbf 파일)
+
+  1. ts7100.dmp  <--- 덤프 파일
+  2. ts7100.dbf    <--- data file 
+
+ ts7100.dmp 파일은 /home/oracle 밑에 있는지만 확인하면 됩니다.
+
+ $ ls -l  ts7100.dmp
+
+#10.  ts7100.dbf 파일을 yys2 쪽의 데이터 있는 디렉토리로 copy 합니다.
+
+$ cp /u01/app/oracle/oradata/PROD/disk1/ts7100.dbf  /u01/app/oracle/oradata/yys2/disk1/ts7100.dbf
+
+$ ls -l /u01/app/oracle/oradata/yys2/disk1/ts7100.dbf
+
+#11. .oraenv 로 인스턴스를 yys2 로 변경합니다.
+
+$ . oraenv 
+   ORACLE_SID ?  yys2
+
+#12. yys2 db 에서 import 명령어로 tablespace level 로 임폴트 합니다.
+
+$ imp transport_tablespace=y file=ts7100.dmp datafiles='/u01/app/oracle/oradata/yys2/disk1/ts7100.dbf'
+
+ 유져이름과 패스워드 물어볼겁니다.
+
+ 유져이름:  sys  as sysdba
+ 패스워드:  oracle
+
+#13. yys2 db 에 임폴트가 잘 되었는지 확인합니다.
+
+yys2(SYS) > @tablespace
+
+#14. ts7100 테이블 스페이스를 read write 로 변경합니다. 
+
+yys2(SYS) > alter  tablespace  ts7100  read  write;
+PROD(SYS) > alter  tablespace  ts7100  read  write;
+
+점심시간 문제. 
+ prod 쪽에 ts8100 테이블 스페이를 생성하고 scott 에서  emp8100 테이블을
+ ts8100 테이블 스페이스에 생성한후  yys2 로 테이블 스페이스 레벨로 이관하시오
+
+오라클 관리 수업 이수자 평가 문제
+
+문제1.  orcl 쪽의 scott 계정의 모든 테이블들을 여러분 영문이름 db의 king 유져에
+           전부 이행하시오 !
+
+문제2.  prod 쪽에 ts8100 테이블 스페이를 생성하고 scott 에서 
+          emp8100 테이블을 ts8100 테이블 스페이스에 생성한후  yys2 로 
+         테이블 스페이스 레벨로 이관하시오 ( 이행된 결과를 캡쳐해두세요)
+
+ ※ 테이블 스페이스를 read only 로 변경하지 않으면 export/import 가 안됩니다.
+    에러가 발생합니다. 
+
+  ※ 현업에서는 테이블 스페이스를 1개만 옮기는게 아니라 여러개를 옮깁니다.
+
+   system 관련한 테이블 스페이스들은 이관하지 않습니다.
+  사용자 데이터가 있는 테이블 스페이스를 이관하는 것입니다.

@@ -1,0 +1,63 @@
+▩ 5.4 default tablespace 가 뭔지 알고 있어야합니다
+ 
+ 다음과 같이 테이블을 생성했을 때 테이블이 어느 테이블 스페이스에 생성될까요?
+
+PROD> connect scott/tiger
+
+PROD>  create  table  emp10
+           ( empno  number(10),
+             ename   varchar2(10) ); 
+
+PROD> @table
+
+Enter value for table_name: emp10
+
+TABLE_NAME                TABLESPACE
+------------------------------ ----------
+EMP10                          SYSTEM  <-- system tablespace 에 만들어졌습니다.
+
+system tablespace 에 사용자 데이터를 담는 테이블을 저장하면 안됩니다.
+system tablespace 는 system 데이터가 저장되어야합니다. 
+
+■ 실습
+
+#1.  default tablespace 로 지정하기 위해  test01 이라는 테이블 스페이스를 생성합니다.
+
+PROD> @tablespace
+	
+PROD> create  tablespace  test01
+             datafile '/u01/app/oracle/oradata/PROD/disk1/test01.dbf' size 100m;
+
+PROD> @tablespace
+
+PROD> alter  database  default  tablespace  test01;
+
+PROD>  ed dbp.sql
+
+col property_name for a35
+col property_value for a25
+
+select  property_name, property_value
+  from database_properties;
+
+PROD> @dbp.sql
+
+#2.  scott 유져에서 emp500 이라는 테이블을 아래와 같이 생성해보고 어느 
+     테이블 스페이스에 만들어졌는지 확인하시오 !
+
+PROD> connect  scott/tiger
+
+PROD> create  table  emp500
+          ( empno   number(10),
+           ename   varchar2(10) );
+
+PROD> @table
+TABLE_NAME                  TABLESPACE
+------------------------------ ----------
+EMP500                         TEST01
+
+문제1. example 이라는 테이블 스페이스는 100m 로 생성하고 이 테이블 스페이스를
+         default  tablespace 로 지정하고 잘 지정되었는지 확인하시오 !
+
+
+문제2.  test01 테이블 스페이스를 drop 하시오 !

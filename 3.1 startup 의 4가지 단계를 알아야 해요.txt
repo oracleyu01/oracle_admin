@@ -1,0 +1,72 @@
+
+▩ 3.1 startup 의 4가지 단계를 알아야 해요
+
+1. shutdown  -----------> nomount
+
+  ①  parameter file 을 읽어서 인스턴스를 구성합니다. 
+  ②  sga 가 열리고 background process 들이 기동되기 시작합니다.
+
+2. nomount ------------>  mount 
+
+  ①  control file 을 읽어서 mount 로 올라갑니다.
+  ②  startup 되는 모든 과정은 전부  alert log file 에 자세히 기록됩니다.
+
+3. mount  -------------> open  
+
+  ① data file, redo log file을 찾습니다.
+  ② data file, redo log file 이 둘다 완전히 열리면 open 단계가 되는것입니다. 
+
+■  startup  되는 과정에서 parameter file, controlfile, data file, redo logfile 을 어떻게
+     찾는지 ?
+
+1. shutdown  -----------> nomount
+
+     ① 파라미터 파일을 찾아야  nomount 로 올라갈 수 있습니다.   
+     ②  $ORACLE_HOME/dbs 밑에 가서  파라미터 파일을 찾습니다. 
+
+2. nomount ------------>  mount 
+
+  ①  control file 이 있어야 mount 로 올라 갈수 있습니다.
+  ②   parameter file 안에 control_files 라는 파라미터에 control file 위치가 나와서
+       그걸 보고 control file 을 찾습니다. 
+
+3. mount  -------------> open  
+
+  ①  datafile , redo log file 이 있어야 open 으로 올라 갈 수 있습니다.
+  ②  datafile 과 redo log file 은 control file 안에 어디에 있는지 나와있습니다.
+       오라클이 controlfile 의 내용을 보고 data file ,redo log file 을 찾아서 올립니다.
+
+■ startup 단계에서 할 수 있는 일
+
+1. shutdown 단계:   cold backup 수행
+2. nomount 단계:    db 생성 작업, contol file 생성 작업
+3. mount 단계  :     복구작업, db의 구조를 변경하는 작업
+4. open 단계 :       실제로 db를 제대로 사용할 수 있는 단계(서비스가 되는 단계)
+
+■ 실습1.   인스턴스를 내리고  nomount 단계로 올라가시오!
+
+shutdown   immediate
+startup  nomount 
+@/home/oracle/i.sql 
+
+■ 실습2.  nomount 단계에서 mount 로 올라가시오 !
+
+alter  database  mount;
+@/home/oracle/i.sql 
+
+■ 실습3. mount 단계에서 open 단계로 올라시오 !
+
+alter  database  open;
+@/home/oracle/i.sql 
+
+■ 실습4. 다시 shutdown 하고 mount 단계로 바로 올라가시오 !
+
+shutdown immediate
+startup  mount
+@/home/oracle/i.sql 
+
+■ 실습5. shutdown 되고 startup 되는 모든 과정에 alert log file 에 자세히 기록되는지 확인!
+
+$ cd  /u01/app/oracle/diag/rdbms/prod/PROD/trace
+$ tail -f alert*
+

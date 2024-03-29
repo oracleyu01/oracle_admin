@@ -1,0 +1,27 @@
+
+▣ 5.11 테이블 스페이스 생성시 extent 관리 방법을 알아야해요.
+
+ 테이블 스페이스 생성시 자동으로 관리되는 기능 2가지 ?
+
+  1. segment  관리  :      자동         vs      수동   
+  2. extent   관리    :      자동         vs      수동
+
+ 오라클에서는 특별한 문제가 없는한 자동으로 사용하기를 권장하고 있습니다.
+
+문법:   create   tablespace  ts5000
+            datafile   '/home/oracle/ts5000.dbf'   size  10m
+            autoextend  on  maxsize  100m
+            segment  space  management  auto
+            extent  management   local;
+                                         
+select  tablespace_name, segment_space_management, extent_management
+  from  dba_tablespaces; 
+
+만약에 extent_management 가 local 이 아니라
+dictionary 면  지도가 system tablespace 
+에만 있기 때문에 데이터 입력할 때 마다
+system tablespace 에 부하가 갑니다. 
+
+점심시간 문제.  1. OMF 기능을 다시 끄시고 꺼져있음을 확인하세요 ~ 
+
+                     2. ts5000 테이블 스페이스를 drop 하세요 ~

@@ -1,0 +1,68 @@
+
+▩ 5.3 테이블 스페이스를 삭제할 때는 이 옵션을 알아야해요
+
+문법:   drop   tablespace   ts01   including  contents  and   datafiles;
+
+설명:  including  contents 를 써야 테이블 스페이스 안에 데이터도 같이 삭제됨
+       테이블 스페이스 안에 테이블이 하나라도 있으면 반드시 including contents 를
+       사용해야합니다.
+
+       including datafiles 를 써야  os 의 물리적 data file 까지 같이 삭제됩니다.
+       이 옵션을 안쓰고 그냥 drop 하면 os 에 물리적 파일이 남아있습니다.
+       괜히 공간만 차지하고 있고 dba 를 불안하게 합니다.  
+
+■ 실습.
+
+#1. ts01 테이블 스페이스를 drop 하시오 !
+
+PROD> @tablespace
+
+TS01       AVAILABLE    /u01/app/oracle/oradata/PROD/disk1/ts01.dbf
+
+#2. ts01 테이블 스페이스를 drop 하는데 물리적인 data file 까지 같이 삭제되게하시오!
+
+PROD> drop  tablespace  ts01   including  contents  and  datafiles;
+PROD> @tablespace
+PROD> exit;
+
+[PROD:~]$
+[PROD:~]$ cd  /u01/app/oracle/oradata/PROD/disk1/
+[PROD:disk1]$ ls
+ctrl1.ctl  indx_ts01.dbf  system01.dbf  ts02.dbf
+
+#3. ts02 테이블 스페이스를 삭제하는데 including contents and datafiles 없이 그냥
+     삭제하시오 !
+$ cd
+[PROD:~]$ ss
+PROD> @tablespace
+
+PROD> drop  tablespace  ts02 ;
+drop  tablespace  ts02
+*
+ERROR at line 1:
+ORA-01549: tablespace not empty, use INCLUDING CONTENTS option
+
+왜 이런 에러가 발생하냐면?  ts02 에 테이블이 있어서입니다.
+
+PROD> drop  tablespace  ts02  including  contents;
+
+$ cd  /u01/app/oracle/oradata/PROD/disk1/
+[PROD:disk1]$ ls
+ctrl1.ctl  indx_ts01.dbf  system01.dbf  ts02.dbf
+
+[PROD:disk1]$ rm ts02.dbf 
+
+※ rm 으로 지우지 말고 반드시 including contents and datafiles  를 써줘야합니다.
+
+문제1.  아래의 테이블 스페이스만 남겨두고 나머지는 다 drop 하시오 !
+
+$ cd
+[PROD:~]$ ss
+PROD> @tablespace
+
+SYSTEM     AVAILABLE /u01/app/oracle/oradata/PROD/disk1/system01.dbf
+SYSAUX     AVAILABLE /u01/app/oracle/oradata/PROD/disk2/sysaux01.dbf
+UNDOTBS    AVAILABLE /u01/app/oracle/oradata/PROD/disk4/undotbs01.dbf
+
+
+PROD> drop tablespace INDX_TS01 including contents and datafiles;

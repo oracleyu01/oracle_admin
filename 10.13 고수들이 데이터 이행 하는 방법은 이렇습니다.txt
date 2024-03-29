@@ -1,0 +1,164 @@
+▣ 10.13 고수들이 데이터 이행 하는 방법은 이렇습니다
+
+   테이블 스페이스 레벨로 이관을 할 수 있으면 이 방법으로 수행하고
+   만약 charactset 이 틀려서 테이블 스페이스 레벨로 못하면 유져레벨로 수행 
+
+이행 순서:
+#0. (orcl) asm 인스턴스를 먼저 올리고 orcl 인스턴스를 올립니다.
+PROD(SYS) > shutdown immediate
+[orcl:~]$ . oraenv
+ORACLE_SID = [orcl] ? +ASM
+[+ASM:~]$ crs_start -all
+
+설명:  위의 명령어 하나로 클러스터 올리고 ASM 올리고 ORCL DB 도 올립니다.
+
+[+ASM:~]$ crs_stat  -t 
+[+ASM:~]$ ps -ef |grep pmon
+[+ASM:~]$ . oraenv
+ORACLE_SID = [+ASM] ? orcl
+[orcl:~]$ sqlplus hr/hr
+
+#1. (orcl) hr 계정의 데이터를 스키마 단위로 익스폴트 합니다.
+
+$ exp system/oracle_4U file=hr.dmp owner=hr
+$  ls -lh  hr.dmp
+
+#2. (yys2) hr 계정의 테이블 생성 스크립트를 뽑아냅니다.(contraint=n)
+$cat x 
+[orcl:~]$ . oraenv
+ORACLE_SID = [orcl] ? yys2
+
+[yys2:~]$ ss
+yys2(SYS) > create  user  hr2 identified by  tiger;
+yys2(SYS) > grant connect, resource  to  hr2;
+yys2(SYS) > create  user oe  identified  by oe;
+yys2(SYS) > grant connect, resource  to  oe;
+
+[yys2:~]$ imp system/oracle file=hr.dmp fromuser=hr touser=hr2 indexes=n constraints=n indexfile=hr_table.sql 
+
+Import terminated successfully without warnings
+
+설명:  위의 명령어는 hr.dmp 파일에서 table 생성 스크립트를 뽑아내는 명령어입니다. 
+         only 테이블 생성 스크립트만 만듭니다. 
+
+점심시간 문제:
+hr_table.sql 을 바탕화면에 다운로드를 받고 열어서 검사 받으시면 됩니다.
+라인 검사입니다. 
+
+#3. (yys2) hr2 계정으로 접속해서 2번에서 생성한 테이블 생성 스크립트를 수행
+
+먼저 sys 유져에서 example tablespace 를 생성합니다.
+
+create  tablespace  example
+  datafile  '/u01/app/oracle/oradata/yys2/disk1/example01.dbf'  size  500m;
+
+그리고 테이블 생성 스크립트 7개를 수행합니다.
+
+CREATE TABLE HR2.COUNTRIES (COUNTRY_ID CHAR(2) CONSTRAINT 
+COUNTRY_ID_NN NOT NULL ENABLE, COUNTRY_NAME VARCHAR2(40), 
+REGION_ID NUMBER, CONSTRAINT COUNTRY_C_ID_PK PRIMARY KEY 
+(COUNTRY_ID) ENABLE ) ORGANIZATION INDEX PCTFREE 10 INITRANS 2 
+MAXTRANS 255 STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 
+FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT) TABLESPACE 
+EXAMPLE NOLOGGING NOCOMPRESS PCTTHRESHOLD 50 ;
+
+CREATE TABLE HR2.DEPARTMENTS (DEPARTMENT_ID NUMBER(4, 0), 
+DEPARTMENT_NAME VARCHAR2(30) CONSTRAINT DEPT_NAME_NN NOT NULL 
+ENABLE, MANAGER_ID NUMBER(6, 0), LOCATION_ID NUMBER(4, 0)) 
+PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 STORAGE(INITIAL 65536 
+NEXT 1048576 MINEXTENTS 1 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL 
+DEFAULT) TABLESPACE EXAMPLE NOLOGGING NOCOMPRESS ;
+
+CREATE TABLE HR2.EMPLOYEES (EMPLOYEE_ID NUMBER(6, 0), 
+FIRST_NAME VARCHAR2(20), LAST_NAME VARCHAR2(25) CONSTRAINT 
+EMP_LAST_NAME_NN NOT NULL ENABLE, EMAIL VARCHAR2(25) CONSTRAINT 
+EMP_EMAIL_NN NOT NULL ENABLE, PHONE_NUMBER VARCHAR2(20), 
+HIRE_DATE DATE CONSTRAINT EMP_HIRE_DATE_NN NOT NULL ENABLE, 
+JOB_ID VARCHAR2(10) CONSTRAINT EMP_JOB_NN NOT NULL ENABLE, 
+SALARY NUMBER(8, 2), COMMISSION_PCT NUMBER(2, 2), MANAGER_ID 
+NUMBER(6, 0), DEPARTMENT_ID NUMBER(4, 0)) PCTFREE 10 PCTUSED 40 
+INITRANS 1 MAXTRANS 255 STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 
+1 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT) TABLESPACE 
+EXAMPLE NOLOGGING NOCOMPRESS ;
+
+CREATE TABLE HR2.JOBS (JOB_ID VARCHAR2(10), JOB_TITLE 
+VARCHAR2(35) CONSTRAINT JOB_TITLE_NN NOT NULL ENABLE, MIN_SALARY 
+NUMBER(6, 0), MAX_SALARY NUMBER(6, 0)) PCTFREE 10 PCTUSED 40 
+INITRANS 1 MAXTRANS 255 STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 
+1 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT) TABLESPACE 
+EXAMPLE NOLOGGING NOCOMPRESS ;
+
+CREATE TABLE HR2.JOB_HISTORY (EMPLOYEE_ID NUMBER(6, 0) 
+CONSTRAINT JHIST_EMPLOYEE_NN NOT NULL ENABLE, START_DATE DATE 
+CONSTRAINT JHIST_START_DATE_NN NOT NULL ENABLE, END_DATE DATE 
+CONSTRAINT JHIST_END_DATE_NN NOT NULL ENABLE, JOB_ID VARCHAR2(10) 
+CONSTRAINT JHIST_JOB_NN NOT NULL ENABLE, DEPARTMENT_ID NUMBER(4, 
+0)) PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 STORAGE(INITIAL 
+65536 NEXT 1048576 MINEXTENTS 1 FREELISTS 1 FREELIST GROUPS 1 
+BUFFER_POOL DEFAULT) TABLESPACE EXAMPLE NOLOGGING NOCOMPRESS ;
+
+CREATE TABLE HR2.LOCATIONS (LOCATION_ID NUMBER(4, 0), 
+STREET_ADDRESS VARCHAR2(40), POSTAL_CODE VARCHAR2(12), CITY 
+VARCHAR2(30) CONSTRAINT LOC_CITY_NN NOT NULL ENABLE, 
+STATE_PROVINCE VARCHAR2(25), COUNTRY_ID CHAR(2)) PCTFREE 10 
+PCTUSED 40 INITRANS 1 MAXTRANS 255 STORAGE(INITIAL 65536 NEXT 1048576 
+MINEXTENTS 1 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT) 
+TABLESPACE EXAMPLE NOLOGGING NOCOMPRESS ;
+
+CREATE TABLE HR2.REGIONS (REGION_ID NUMBER CONSTRAINT 
+REGION_ID_NN NOT NULL ENABLE, REGION_NAME VARCHAR2(25)) PCTFREE 
+10 PCTUSED 40 INITRANS 1 MAXTRANS 255 STORAGE(INITIAL 65536 NEXT 
+1048576 MINEXTENTS 1 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL 
+DEFAULT) TABLESPACE EXAMPLE NOLOGGING NOCOMPRESS ;
+
+
+#4. (yys2) hr2 계정에 1번에 받은 export 파일을 임폴트를 수행(indexes=n)
+
+[yys2:~]$  imp  system/oracle  file=hr.dmp  ignore=y  indexes=n constraints=n fromuser=hr touser=hr2
+
+설명: 위의 작업은 빈 구조만 있는 테이블에 데이터만 입력하는 명령어
+        ignore=y 를 쓰면은 테이블이 기존에 있으면 데이터만 입력합니다. 
+
+#5. (yys2) hr2 계정에서 인덱스를 생성합니다.
+
+[yys2:~]$ imp system/oracle file=hr.dmp  indexes=y constraints=n fromuser=hr touser=hr2  indexfile=hr_index.sql
+
+[yys2:~]$ ls -l hr_index.sql
+
+hr_index.sql 파일을 바탕화면에 다운로드를 받으세요 ~
+
+#6. (yys2) hr2 계정에서 제약을 생성합니다.
+
+[yys2:~]$ imp system/oracle file=hr.dmp  indexes=n constraints=y fromuser=hr touser=hr2  indexfile=hr_constraints.sql
+
+hr_constraints.sql 파일을 바탕화면에 다운로드 받으세요 ~
+
+#7.  yys2 와 orcl 간의 데이터의 건수가 동일한지 확인하시오 !
+
+-- orcl 쪽에서  hr 계정의 통계정보를 수집하고 데이터 건수 확인하기
+
+orcl(HR) > exec dbms_stats.gather_schema_stats('HR');
+
+PL/SQL procedure successfully completed.
+
+orcl(HR) > select table_name, num_rows
+  2       from  user_tables;
+
+TABLE_NAME                       NUM_ROWS
+------------------------------ ----------
+COUNTRIES                              25
+EMPLOYEES                             107
+REGIONS                                 4
+DEPARTMENTS                         27
+LOCATIONS                              23
+JOB_HISTORY                            10
+JOBS                                       19
+
+7 rows selected.
+
+yys2(HR2) > exec dbms_stats.gather_schema_stats('HR2');
+
+PL/SQL procedure successfully completed.
+
+yys2(HR2) > select table_name, num_rows
+                  from  user_tables;

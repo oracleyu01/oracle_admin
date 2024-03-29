@@ -1,0 +1,81 @@
+▩ 5.10 OMF(Oracle Managed File) 이 뭔지 알아야해요 
+
+OMF(Oracle Managed File) 기능을 켜면 테이블 스페이스 생성할 때
+ 물리적인 data file 의 위치와 이름을 신경안써도 됩니다.
+
+1. OMF 기능이 안켜있을 때 테이블 스페이스 생성 방법
+
+ create  tablespace  ts201
+   datafile  '/home/oracle/ts201.dbf' size  10m;
+
+2. OMF 기능을 켰을 때의 테이블 스페이스 생성 방법
+
+ create  tablespace  ts202   datafile  size  10m;
+
+■ 실습
+
+1. 먼저 omf 기능이 켜있는지 확인합니다.
+
+PROD> show  parameter  db_create_file_dest
+
+2. omf 기능을 켭니다.
+
+PROD>  alter  system  set db_create_file_dest='/home/oracle' scope=both;
+
+PROD>  show  parameter  db_create_file_dest
+
+3. ts202 테이블 스페이스를 생성
+
+PROD> create  tablespace  ts202;
+
+size 를 안써주면 기본값이 100m 로 만들어집니다.
+datafile 위치와 이름은 오라클이 알아서 해줍니다. 
+
+PROD> @tablespace.sql 
+
+문제1.  그럼 OMF 기능을 다시 끄시오 
+
+PROD> alter  system set  db_create_file_dest=''  scope=both;
+
+PROD> show parameter db_create_file_dest
+
+스토리지 3가지 중에 raw device 는 안되고  file system 과 asm 에서만
+사용가능합니다. 
+
+문제2.  방금 생성한 ts202 테이블 스페이스를 drop 하시오 !
+
+PROD> drop  tablespace  ts202  including contents and datafiles;
+
+OMF 기능을 켜고 만든 테이블 스페이스는 아래와 같이 DROP 해도
+os 의 파일이 같이 지워집니다.
+
+PROD> drop  tablespace  ts202;
+
+문제3. 다시 OMF 기능을 켜는데 이번에는 기본 위치를
+          /u01/app/oracle/oradata/PROD/disk1/ 로 되게하시오 !
+
+PROD> alter  system  set  db_create_file_dest='/u01/app/oracle/oradata/PROD/disk1/'  scope=both;
+
+문제4.  ts501 이라는 테이블 스페이스를 다음과 같이 생성하면
+          data file 사이즈가 어떻게 되는지 확인하시오 !
+
+PROD> create  tablespace  ts501; 
+
+PROD> @tablespace
+
+$ cd /u01/app/oracle/oradata/PROD/disk1/PROD/datafile
+
+$ ls -lh o1_mf_ts501_lwop9388_.dbf
+
+문제5. 다음과 같이 ts501 테이블 스페이스에 datafile 을 추가해서 공간을
+         늘리면 생성되는 data file의 크기가 어떻게 되는지 확인하시오 !
+
+PROD> alter   tablespace  ts501  add   datafile ;
+
+PROD> @/home/oracle/tablespace.sql
+
+$ ls -lh *
+-rw-r----- 1 oracle dba 101M Feb 13 11:51 o1_mf_ts501_lwop9388_.dbf
+-rw-r----- 1 oracle dba 101M Feb 13 11:55 o1_mf_ts501_lwopk4w4_.dbf
+
+관련된 ocp 문제 : https://cafe.daum.net/oracleoracle/SmzH/38

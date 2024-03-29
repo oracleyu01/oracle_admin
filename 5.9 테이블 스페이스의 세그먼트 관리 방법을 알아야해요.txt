@@ -1,0 +1,185 @@
+
+▩ 5.9 테이블 스페이스의 세그먼트 관리 방법을 알아야해요
+
+관련 설명 그림 : https://cafe.daum.net/oracleoracle/So33/331
+pct free 를 두는 이유는 나중에 이 블럭에 데이터가 update 될 때 이 공간을
+사용하기 위해서 입니다. 
+
+만약에 이 공간이 너무 작거나 없다면 "row migration" 현상이 일어나면서
+성능이 느려집니다.  그래서 dba 가 2달 한번씩 또는 3달한번씩 토요일에 출근해서
+row migration 현상이 일어난 row 들을 정리해주는 작업을 수행합니다.
+
+그림 설명:  https://cafe.daum.net/oracleoracle/So33/332
+
+row migration 이 발생하게 되면 db 성능이 떨어집니다. 왜냐면 데이터를 찾으러
+갔는데 이사갔다가 해서 이사간데를 찾아가야하기 때문입니다. 
+
+그래서 pct free 영역을 꼭 넉넉히 확보하고 있어야합니다. 
+
+※ 지금 배운 내용중에 꼭 dba 가 알아야할 주요용어 4가지?
+
+ 1. pct free 
+ 2. pct used
+ 3. row migration 현상
+ 4. db reorg 작업
+
+■ 실습
+
+#1.  emp 테이블의 pct free 와 pct used 가 어떻게 셋팅되어있는지 확인합니다.
+
+PROD> select table_name, pct_free, pct_used
+            from  user_tables
+            where table_name='EMP';
+
+#2. emp 테이블의 pct free 를 20으로 늘리시오 !
+
+PROD> alter  table  emp  pctfree 20;
+
+PROD> select table_name, pct_free, pct_used
+            from  user_tables
+            where table_name='EMP';
+
+문제1.  dept 테이블의 pct free 와 pct used 를 조회하고 dept 테이블이
+          앞으로 update 가 많이 일어날것 같으므로 row migration 현상을 
+          줄이기 위해서 pctfree 를 30으로 늘리시오 !
+
+PROD> select table_name, pct_free, pct_used
+            from  user_tables
+            where table_name='DEPT';
+
+PROD> alter  table  dept  pctfree 30;
+
+※ row migration 이 많이 일어나는 테이블은 pctfree 를 늘릴 필요가 있습니다.
+
+▣ emp 테이블에 row migration 현상이 발생했는지 확인하는 방법
+
+1. 확인하기 위한 테이블을 생성합니다.
+
+PROD> @?/rdbms/admin/utlchain.sql
+
+Table created.
+
+PROD> desc chained_rows
+
+2.  emp 테이블에 row migration 현상이 일어났는지 분석합니다. 
+
+PROD> analyze   table  emp   list  chained  rows ;
+
+3. 분석된 결과를 확인합니다.
+
+PROD> select  count(*)  from chained_rows; 
+
+ 0 이 나옵니다.  row migration 이 발생안했습니다.
+
+4. row migration 현상이 발생하겠금 update 를 수행 
+
+PROD> alter  table  emp  modify   job   varchar2(100);
+
+PROD> update  emp
+            set  job='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'; 
+
+5. emp 테이블을 분석합니다.
+
+PROD> analyze  table  emp  list  chained  rows; 
+
+6. 분석된 결과를 확인합니다. 
+
+PROD> select count(*) from  chained_rows; 
+
+PCT FREE 가 여유가 넘쳐서 row migration 이 발생하지 않은것 입니다.
+아주 이상적인 상태입니다. 
+
+7.  row migration 이 일어날 수 있도록 다시 emp 테이블을 재구성합니다. 
+
+PROD> @demobld.sql
+
+8. emp 테이블의 pct free 를 1로 변경합니다.
+
+PROD> alter  table  emp  pctfree  1;
+
+9. row  migration 이 발생하겠금 update 를 수행합니다.
+
+PROD> alter  table  emp  modify  job  varchar2(4000);
+
+PROD> update  emp
+             set  job='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+10. emp 테이블을 분석하고 결과를 확인합니다. 
+
+PROD> analyze  table  emp  list  chained  rows;
+
+PROD> select count(*) from chained_rows;
+
+이제 부터 emp 테이블 검색할 때 성능이 떨어지게 됩니다. 
+그래서 dba 나 db 엔지니어가 이 현상을 해결해줘야합니다. 
+
+11. 위의 현상을 해결하기 위해서 emp 테이블을 다른 테이블 스페이스로
+     move 합니다. 또는 같은 테이블 스페이스내에서 move 해도 됩니다.
+
+PROD>  select  table_name, tablespace_name
+               from   user_tables
+               where  table_name='EMP';
+
+PROD> alter  table  emp  move   tablespace  example;
+
+12.  emp 테이블을 분석하고 row migration 된 row 들이 정리되었는지 확인합니다.
+
+PROD> truncate  table  chained_rows; 
+
+PROD> analyze  table  emp  list  chained  rows;
+
+PROD> select count(*) from chained_rows;
+
+문제1.  dept 테이블을 row migration 현상이 일어나게 구성하고  
+          이를 해결하시오 !
+
+alter  table  dept  pctfree  1; 
+
+alter  table  dept 
+  modify  loc   varchar2(4000);
+
+update  dept
+   set  loc='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+테이블이 작아서 잘 테스트가 안되는데 발생했다고 가정하고 해결합니다.
+
+답:
+
+PROD> analyze  table  dept  list  chained  rows;
+
+PROD> select count(*) from chained_rows;
+
+PROD> alter   table  dept  move  tablespace  example;
+
+PROD> analyze  table  dept  list  chained  rows;
+
+PROD> select count(*) from chained_rows;
+
+그래서 우리가 처음에 테이블을 생성할 때 row migraiton 현상이 일어날것으로 예상되는
+테이블은 pct free 를 크게 잡고 생성해줘야합니다.
+
+그런데 오라클에 pctfree 를 알아서 자동조절되게하는 기능이 있습니다. 
+그게 바로 ASSM (Automatic  Segment  Space  Management)  입니다. 
+
+ASSM 은 세그먼트의 공간관리를 오라클이 알아서 자동으로 하겠다는것입니다
+테이블 스페이스를 생성할 때 다음과 같이 만들면 됩니다.
+
+create   tablespace   ts800
+  datafile  '/home/oracle/ts800.dbf'  size  10m
+  segment space  management  auto;
+
+select  tablespace_name,  segment_space_management
+       from  dba_tablespaces;
+
+create   table  emp800
+( empno  number(10),
+ ename   varchar2(10),
+  sal   number(10) )
+ tablespace  ts800;
+
+위와 같이 생성하면 emp800 에 pct free 와 pct used 는 오라클에 의해서
+자동관리 됩니다.   이렇게 하면 크게 신경안써도 되지만 가끔 테이블을 분석해서 row migration 이 일어났는지 확인하는 작업을 하고 해결해야합니다.
+
+create   tablespace   ts800
+  datafile  '/home/oracle/ts800.dbf'  size  10m
+  segment space  management  auto;  <--- 안주면 이게 default 입니다. 

@@ -1,0 +1,359 @@
+
+▩ 2.2 논리적 및 물리적 데이터 베이스 구조
+
+ 오라클을 설치하면 database 를 가장 먼저 생성합니다. 
+
+ * db 이름을 확인합니다.
+
+  select  name from v$database; 
+
+2. 테이블 스페이스(tablespace)
+
+   하나의 데이터베이스는 여러개의 테이블 스페이스로 구성되어 있습니다.
+
+ * 테이블 스페이스를 조회합니다.
+
+  select  tablespace_name,  file_name
+    from  dba_data_files;
+
+ ※ 오라클에서는 왜 테이블 스페이스라는 논리적 저장 단위를 두었는가 ?
+
+  데이터가 많아지면 데이터를 별도로 구분해서 관리해야하기 때문에 필요합ㄴ디ㅏ.
+
+  예: 집에                방이 여러개 있는것을 생각하시면 됩니다.
+      ↓                    ↓
+   데이터베이스     테이블 스페이스 
+
+■ 테이블 스페이스의 종류
+
+ 1. system  :   데이터 사전을 저장하고 있는 테이블 스페이스
+                      ↓
+                   user_xxx
+                   all_xxx
+                   dba_xxx 
+
+           오라클을 운영하기 위한 아주 중요한 데이터가 여기 들어있기 때문에
+           만약 system tablespace 가 손상이되면 db 운영이 안됩니다. 
+
+ 2. sysaux   :  오라클 성능을 분석할 수 있는 데이터가 들어있는 테이블 스페이스 입니다.
+
+ 3. undotbs1 :  롤백을 하기 위한 데이터가 들어있는 테이블 스페이스 입니다. 
+ 4. users  :    emp 테이블과 같은 사용자 데이터가 들어있는 테이블 스페이스 입니다.
+ 5. example :  hr 계정, sh 계정의 테이블들이 저장되어있는 테이블 스페이스 입니다.
+
+  dba 가 db 의 기능에 관련해서 자주 테스트를 해봐야해서 example 테이블 스페이스가
+  필요합니다. 
+
+문제1.  (dba에게 유용한 스크립트 생성)   tablespace.sql 이라는 이름으로 아래의
+          스크립트를 저장하시오 !
+
+  col  tablespace_name  for a10
+  col file_name for a45
+
+  select  tablespace_name, status, file_name
+     from  dba_data_files; 
+         
+문제2. (dba에게 유용한 스크립트 생성) 오라클 인스턴스의 상태를 확인하는 스크립트를
+          i.sql 이라는 이름을 저장하시오 !
+
+select  status
+  from v$instance; 
+
+지금 만든 필수 스크립트:   @datafile.sql
+                                   @tablespace.sql
+                                   @i.sql
+
+문제3.  다음과 같이 test01 이라는 테이블 스페이스를 생성합니다.
+
+ create   tablespace   test01  
+   datafile  '+data'  size 10m;
+
+문제4. test01 테이블 스페이스에 emp01 이라는 테이블을 생성합니다. 
+
+SQL> connect scott/tiger
+
+SQL>  create  table  emp01
+         (  empno    number(10),
+            ename    varchar2(20),
+             sal       number(10) )
+          tablespace  test01;
+
+문제5.  emp01 테이블에 데이터를 입력하는데 데이터를 계속 누적해서 입력해서 
+          공간부족으로 에러가 날때까지 입력하시오!
+
+SQL> insert  into  emp01  values( 1111, 'aaa', 3000);
+
+SQL> insert  into  emp01
+        select  *
+         from  emp01;
+
+SQL>   /    엔터 
+
+ORA-01653: unable to extend table SCOTT.EMP01 by 128 in tablespace TEST01
+
+문제6.  위의 상황이 발생했습니다.  dba인 여러분들이 위의 상황을 해결하세요 !
+
+ #1.  dba.sh 쉘을 돌려서 alert  log file 에 어떤 이슈가 있는지 확인합니다.
+
+ #2. dba.sh 쉘에서 4번을 눌러서 테이블 스페이스 공간을 확인합니다. 
+ 
+ #3. 조치를 수행합니다.
+
+문제7. test01 테이블 스페이스의 공간을 10m  더 늘리시오 !
+
+SYS> alter  tablespace   test01   
+          add  datafile  '+data'  size   10m;
+
+SQL> connect scott/tiger
+Connected.
+
+SQL> insert into emp01 values(1111,'aaa',3000);
+
+1 row created.
+
+※ dba 관리자의 일중에 하나 !  
+
+ 1. tablespace 의 공간이 꽉찼을때 해결하는 일  
+
+문제8. test02 라는 테이블 스페이스를 사이즈 5m 로 해서 생성하고
+         test02 테이블 스페이스에 dept02 테이블을 dept 테이블과 똑같은 구조로
+         생성하시오 !
+
+SYS> create   tablespace  test02
+          datafile   '+data'   size  5m; 
+
+SYS> connect scott/tiger
+Connected.
+SCOTT>
+SCOTT> desc dept
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ DEPTNO                                             NUMBER(10)
+ DNAME                                              VARCHAR2(14)
+  LOC                                                VARCHAR2(13)
+
+SCOTT> create  table  dept02
+          ( deptno      number(10),
+            dname       varchar2(14),
+            loc            varchar2(13) )
+          tablespace  test02;
+
+SCOTT> drop  table  dept02  purge;
+
+SCOTT> create  table  dept02
+           tablespace   test02
+           as
+             select  *
+               from dept
+               where  1 = 2; 
+
+문제9. (dba에게 유용한 스크립트 생성하기)   ASM 디스크 사용량이 어떻게 되는지
+         조회하고 스크립트를 asm.sql 로 저장하시오 !
+
+SELECT GROUP_NUMBER, NAME, STATE, TOTAL_MB, FREE_MB FROM V$ASM_DISKGROUP;
+
+※  지금 만든 필수 스크립트:   @datafile.sql
+                                       @tablespace.sql
+                                       @i.sql
+                                       @asm.sql 
+
+문제10. (dba에게 유용한 스크립트)  오라클 접속할 때 앞에 SQL> 아니라 유져명이 되게하시오!
+
+ SQL> ---------->  SCOTT> 
+
+$ cd $ORACLE_HOME/sqlplus/admin
+$ vi  glogin.sql
+
+define _editor='vi'
+set sqlprompt "_user > "
+
+3. 세그먼트(segment) 
+
+    emp 테이블과 같은 저장 단위를 세그먼트라고 합니다.
+
+ 예제1.  test02  테이블 스페이스에 어떤 세그먼트가 있는지 조회하시오 !
+
+SCOTT > insert into dept02
+            select *
+             from dept;
+
+SCOTT >  col  tablespace_name  for  a10
+SCOTT >  col  segment_name  for  a10
+
+SCOTT >  select   tablespace_name, segment_name
+               from  dba_segments
+              where  tablespace_name='TEST02';
+
+문제1.   USERS 테이블 스페이스에 어떤 세그먼트들이 있는지 조회하시오 !
+
+SCOTT >  select   tablespace_name, segment_name
+               from  dba_segments
+              where  tablespace_name='USERS';
+
+문제2.  TEST02 테이블 스페이스에 emp03 이라는 테이블을 emp 테이블과 똑같은 구조와
+          데이터로 생성하시오 !
+
+SCOTT>  create  table   emp03
+             tablespace  test02
+            as
+             select   *
+               from   emp;
+
+문제3.  emp03 segment 가  test02 테이블 스페이스에 잘 있는지 확인하시오 !
+
+SCOTT>  select   segment_name,  tablespace_name
+                 from   dba_segments
+                where   segment_name  = upper('&segment_name') ;
+
+SCOTT> save  segment.sql
+
+SCOTT > @segment.sql
+
+문제4.  example 테이블 스페이스에는 어느 세그먼트가 있는지 db 에버에서 조회하시오!
+
+select   tablespace_name, segment_name
+     from  dba_segments
+     where  tablespace_name='EXAMPLE';
+
+오라클 관리 이수자 평가 제출 포트폴리오: 1. EXAMPLE 테이블 스페이스의 모든 세그먼트들을
+                                                          다른 새로운 DB 에 마이그레이션 하는거
+
+점심시간 문제:  지금 방금 만든  emp03 테이블에  인덱스를 생성하고 dba_segments 에서
+                    인덱스 세그먼트가 조회되는지 확인하시오 !
+
+ 인덱스를 3개를 여러분들이 원하는 인덱스를 생성하세요 ~ 
+
+SCOTT > create index emp03_sal on emp03(sal);
+SCOTT > create index emp03_job on emp03(job);
+SCOTT > create index emp03_empno on emp03(empno);
+
+SCOTT > select segment_name, tablespace_name
+              from  dba_segments
+              where  segment_name in ('EMP03_EMPNO','EMP03_SAL','EMP03_JOB')
+
+4. 익스텐트(extent)
+
+   케잌이 segment 라면 케잌의 조각이 extent 입니다.  
+
+■ 실습. 
+
+#1. test01 테이블 스페이스에  emp07 테이블을 생성하시오 !
+
+scott>  create  table   emp07
+         (  empno  number(10),
+           ename  varchar2(10),
+             sal     number(10) )
+          tablespace   test01;
+
+설명:  create  table 명령어 수행시 맨 아래에 tablespace test01 이라고 안쓰고 만들면
+        그냥 default  tablespace 에 emp07 이 생성됩니다.  
+        default  tablespace 가 users  입니다.
+
+#2.  emp07  테이블이 test01 테이블 스페이스에 만들어졌는지 확인하시오 !
+
+SCOTT>  select  table_name,  tablespace_name
+                from   user_tables
+               where  table_name = upper('&table_name');
+
+SCOTT> save  table.sql
+
+SCOTT> @table.sql 
+
+#3.  emp07 테이블에 데이터를 1건 입력하시오 !
+
+SCOTT> insert  into  emp07(empno,ename,sal)
+            values( 1111, 'aaaa',  3000);
+
+SCOTT> commit;
+
+#4.  emp07 세그먼트와 그 안에 익스텐트가 몇개 인지 확인하시오 !
+SCOTT > col segment_name for a10
+
+SCOTT>  select  segment_name,  extent_id, bytes/1024
+                  from  user_extents
+                 where  segment_name= upper('&segment_name');
+
+SCOTT> save  extent.sql 
+
+#5.  emp07 에 데이터를 여러번 입력해서  emp07 세그먼트의 익스텐트가 늘어나는지 확인하시오
+
+SCOTT>  insert  into  emp07
+             select *
+                from emp07;
+
+SCOTT> @extent.sql 
+
+문제1.  test04 라는 테이블 스페이스를 생성하고  test04 테이블 스페이스에 dept 테이블과 
+          구조와 데이터가 똑같은 dept04 테이블을 생성하고 나서 dept04 테이블에 여러번
+          데이터를 입력하고  익스텐트가 몇개 인지 확인하시오 !
+
+SYS> create  tablespace  test04   datafile  '+data'  size 5m;
+
+SCOTT> create  table  dept04
+            tablespace   test04
+            as
+                 select  *
+                   from  dept;
+
+SCOTT>  insert  into  dept04  
+              select  *
+               from dept04;
+
+SCOTT> /   <--- 여러번 실행
+
+SCOTT> @extent.sql 
+
+문제2.  dept04 테이블을 truncate 하고  dept04 테이블의 익스텐트의 갯수를 확인하시오 !
+
+SCOTT> truncate   table  dept04;
+
+설명: delete  와 truncate 의 차이는 ?    
+
+      delete 는 rollback 이 되지만 truncate  는 rollback 이 안됩니다. 
+
+
+문제2.  다시 데이터를 insert 를 dept04 테이블에 여러건 하고  익스텐트가 여러개 생겼는지
+          확인하고나서 이번에는 delete 로 dept04 테이블을 전체를 다 지우고
+          dept04 테이블의 익스텐트의 갯수를 확인하시오 ! ( 데이터 이행할 때 중요한 테스트)
+
+SCOTT > insert into dept04
+         select *
+         from dept;
+
+SCOTT > insert into dept04
+         select *
+          from dept04;
+
+SCOTT >  /    <--- 여러번 실행
+
+SCOTT > delete from dept04;
+
+8192 rows deleted.
+
+SCOTT > @extent
+
+SEGMENT_NA  EXTENT_ID BYTES/1024
+---------- ---------- ----------
+DEPT04              0         64
+DEPT04              1         64
+DEPT04              2         64
+DEPT04              3         64
+DEPT04              4         64
+
+여유공간을 많이 확보하고 싶다면 delete 로 지우고 안되고 truncate 로 지워야합니다.
+
+그리고 가장 중요한게 대량 데이터를 delete 로 지우면 한참후에 완전히 지워지지만
+truncate 는 단번에 다 지워집니다. 
+
+5. block   
+
+  오라클에서 데이터를 저장하는 최소 저장 단위
+  오라클 기본 블럭 사이즈는  8kb 입니다.
+
+ select   segment_name, extent_id, bytes/1024, blocks
+      from  user_extents
+     where   segment_name = 'DEPT04';
+
+
+
+

@@ -1,0 +1,57 @@
+▩ 1.8  LGWR (log  writer )
+
+  LGWR 의 역활 ?    리두 로그 버퍼의 내용을 리두 로그 파일에 내려쓰는 프로세서
+
+ chatGPT 에게 질문:  오라클 LGWR 가 리두로그 버퍼의 내용을 리두로그 파일에 내려쓰는
+                            4가지 시점을 알려줘 ?
+
+  1.  commit 할 때
+  2.  리두로그 버퍼가 어느 정도 찼을때
+  3.  3초마다
+  4.  checkpoint 이벤트(메모리의 내용을 database 에 일괄 적용)  
+
+   ckpt 프로세서 -------> lgwr 프로세서 ---------> dbwr  프로세서
+
+■ 실습.
+
+#1.  v$process 를 조회해서 LGWR 의  SPID 를 알아내세요 !
+
+ select  pname, spid
+        from  v$process
+        where  pname  like 'LGW%';
+
+   LGWR     	310
+
+#2. SPID 로 TOP 명령어를 날려서 얼마나 바쁜지 확인하시오 !
+
+ $ top  -p  310
+
+문제1.  LGWR 관련해서 DBA 에게 유용한 스크립트를 1개만 알려줘.라고 chatGPT 에게
+          물어봅니다. 
+
+SELECT 
+    a.name,
+    b.value AS "Redo Log Buffer Writes",
+    c.value AS "Redo Log Writes"
+FROM 
+    v$statname a, v$sysstat b, v$sysstat c
+WHERE 
+    a.statistic# = b.statistic# AND
+    a.statistic# = c.statistic# AND
+    a.name IN ('redo buffer allocation retries', 'redo writes');
+
+DB 올린 이후에 229번 Lgwr 가 작동했습니다. 
+
+문제2.  윤호가 올려준 Shell script 를  수행해서 LGWR 가 현재 작동중 여부를 확인하시오 !
+
+#!/bin/bash
+
+# Check if LGWR process is running
+lgwr_process=$(ps -ef | grep "ora_lgwr_" | grep -v "grep" | wc -l)
+
+if [ $lgwr_process -gt 0 ]; then
+echo "LGWR process is running."
+else
+echo "LGWR process is not running. Please investigate."
+# You can add additional actions here, such as sending an alert email or restarting the database.
+fi

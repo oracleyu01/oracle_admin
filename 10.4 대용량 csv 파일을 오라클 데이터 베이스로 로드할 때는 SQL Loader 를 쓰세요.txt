@@ -1,0 +1,114 @@
+
+▣ 10.4 대용량 csv 파일을 오라클 데이터 베이스로 로드할 때는 SQL*Loader 를 쓰세요
+
+ * 오라클의 데이터 이행 3가지 툴
+
+   1.  direct load  insert  :  서브쿼리를 사용한 insert
+   2. direct  path  insert  :  SQL*loader
+   3. export / import      :  덤프 파일 또는 펌프 파일 생성해서 이행
+
+  p 17-25 그림 
+
+  data file --->  csv 파일
+  control file  ---> sqlloader 의 controlfile 로 csv 파일의 문법이 들어있는 파일
+  bad file      --->  입력 거부된 data  (문법과 맞지 않아서)
+  discard  file  ---> 입력 거부된 data  (문법은 맞는데 테이블에 제약으로 인해서 거부된)
+  log file ---->  입력하면서 발생한 작업 이력 데이터
+
+■ 실습 순서
+
+ #1.  sample.csv 를 준비합니다.(카페에서 다운로드 받으세요)
+
+ #2.  orcl 의 scott 유져에서 sample 테이블을 생성합니다. 
+
+   create  table  sample
+   ( line_no    varchar2(20),
+     time_inout   varchar2(10),
+     in_cnt     varchar2(10),
+     out_cnt    varchar2(10) );
+
+ #3.  sample.csv 를 리눅스에 /home/oracle 밑에 올립니다. 
+
+ #4.  데이터 입력 문법이 들어있는 control file 을 생성합니다.
+
+ $ vi   sample.txt
+
+options(skip=1)
+load data
+infile '/home/oracle/sample.csv'
+into table sample
+fields terminated by ','
+optionally enclosed by '"'
+(line_no, time_inout, in_cnt, out_cnt)
+
+ #5.  sqlloader 를 이용해서 데이터를 이행합니다.
+
+ $ sqlldr  scott/tiger  control=sample.txt  data=sample.csv
+
+ #6. 데이터가 잘 들어갔는지 확인합니다
+ 
+$ vi sample.log
+
+Total logical records skipped:          1
+Total logical records read:            20
+Total logical records rejected:         0
+Total logical records discarded:        0
+
+
+문제1. dept2.csv 를 SQL*loader 를 이용해서 dept100 테이블에 입력하시오!
+
+데이터 있는곳 : https://cafe.daum.net/oracleoracle/So33/524
+
+ create  table  dept100
+ ( deptno  number(2),
+   dname  varchar2(14),
+    loc      varchar2(13) );
+
+문제2. scott 계정에서 sales100 테이블을 생성하고 sales.csv 파일을 sqlloader 로 입력하시오
+
+데이터 있는곳 : https://cafe.daum.net/oracleoracle/So33/525
+
+orcl(SCOTT) > create table sales100
+                  as
+                  select *
+                   from  sh.sales
+                    where 1 = 2;
+
+$ vi sales100.txt
+
+options(skip=1)
+load  data
+infile  '/home/oracle/sales.csv'
+into  table  sales100
+fields   terminated  by  ','
+optionally   enclosed   by  '"'
+(prod_id,cust_id,time_id date 'YYYY/MM/DD HH24:MI:SS',channel_id,promo_id,quantity_sold,amount_sold )
+
+※ SQL loader 를 이용해서 데이터 입력시 성능을 높이는 방법 
+
+  "High  water  mark  위로  데이터 입력하기 "
+
+#1.  sales100 테이블을 truncate 합니다. 
+
+#2.  HWM 위로 데이터를 입력합니다.
+
+$ sqlldr  scott/tiger  control=sales100.txt  data=sales.csv   direct=y
+
+☞ direct 옵션 
+ 
+  - y :  direct path load 방식으로 load 한다. (HWM 위로 입력)
+  - n : conventional  load  방식으로 load 한다. (HWM 아래에 입력) 
+
+문제3.  scott계정에서 products 테이블을 만들고  products.csv 의 data를
+         sqlloader 를 이용해서 로드하는데 HWM 위로 입력하시오 !
+
+데이터와 테이블 생성 스크립트 있는곳 : 
+https://cafe.daum.net/oracleoracle/So33/527
+
+답:
+
+
+점심시간 문제. times 테이블을 구성하고 times.csv 를 sqlloader 를 이용해서 
+                    hwm 위로 입력하고 나서 건수를 count 해서 검사받으세요 ~
+
+scott 에 sales, times, products 를 생성했습니다.

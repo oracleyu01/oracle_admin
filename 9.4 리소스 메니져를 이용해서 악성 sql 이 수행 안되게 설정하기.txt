@@ -1,0 +1,247 @@
+
+
+▣ 9.4 리소스 메니져를 이용해서 악성 sql 이 수행 안되게 설정하기
+
+ new_max_est_exec_time 을 120초로 설정하기
+
+ 지금 부터 수행하려는 SQL이 120초를 넘어갈것 같으면 아예 처음부터 시작도
+ 안되게 할 수 있습니다. 
+
+■ 실습
+
+SYSTEM>  exec dbms_resource_manager.create_pending_area();
+
+SYSTEM> begin
+          dbms_resource_manager.update_plan_directive(
+          plan=>'DAYTIME',
+          group_or_subplan=>'ONLINE_USERS',
+          new_max_est_exec_time => 120 );
+        end;
+/
+
+SYSTEM>  exec dbms_resource_manager.submit_pending_area();
+
+SCOTT 으로 접속해서 아래의 악성 SQL을 수행해봅니다.
+
+SCOTT>  select  count(*)
+              from  sh.sales, sh.sales; 
+
+ERROR at line 2:
+ORA-07455: estimated execution time (290794 secs), exceeds limit (120 secs)
+
+문제1. 그럼 위의 설정을 120초가 아니라 5분으로 설정하시오 !
+
+SYSTEM>  exec dbms_resource_manager.create_pending_area();
+
+SYSTEM> begin
+          dbms_resource_manager.update_plan_directive(
+          plan=>'DAYTIME',
+          group_or_subplan=>'ONLINE_USERS',
+          new_max_est_exec_time => 300 );
+        end;
+/
+
+SYSTEM>  exec dbms_resource_manager.submit_pending_area();
+
+문제2.  지금까지 설정한 daytime 리소스 플랜을 사용하지 않게 하시오 !
+
+SYSTEM>  alter  system  set  resource_manager_plan='';  
+
+문제3.  다시 daytime 리소스 플랜을 사용할 수 있도록 설정하시오 !
+
+SYSTEM>  alter  system  set  resource_manager_plan='daytime'; 
+
+문제3. (점심시간 문제) 현대 카드 dba 처럼 다음과 같이 편하게 resource 사용에 
+        대한 제한을 할 수 있게 하는 스크립트를 생성하시오 !
+
+SYSTEM> @resource.sql
+
+ 제한할 병렬도는 ?   
+ 제한할 undo 사용량은 ? 
+ 제한할 execution time(초) 은 ?
+ 제한할 idle time(초) 은 ?
+ 제한할 blocking idle time(초) 은 ?
+
+답:
+
+accept  p_degree  prompt '제한할 병렬도는 ?  ' 
+accept  p_undo    prompt '제한할 undo 사용량은? '
+accept  p_exec    prompt '제한할 execution time(초) ? '
+accept  p_idle    prompt '제한할 idle time(초) ? '
+accept  p_block   prompt '제한할 blocking idle time(초) ? '
+
+exec dbms_resource_manager.create_pending_area();
+
+begin
+          dbms_resource_manager.update_plan_directive(
+          plan=>'DAYTIME',
+          group_or_subplan=>'ONLINE_USERS',
+          new_parallel_degree_limit_p1 => &p_degree,
+          new_undo_pool => &p_undo, 
+          new_max_est_exec_time => &p_exec,
+          new_max_idle_time => &p_idle,
+          new_max_idle_blocker_time  =>  &p_block 
+);
+end;
+/
+
+exec dbms_resource_manager.submit_pending_area();
+
+alter system  set  resource_manager_plan= 'daytime';
+
+문제4.  오전에는 daytime 리소스 플랜을 생성했는데 밤에 수행하는 작업을 위해
+          nighttime 리소스 플랜을 생성하시오 !
+
+낮시간에는 주로 주문이 들어오는 시간이므로 oltp 유져들을 위한 리소스 메니저
+였다면 밤시간에는 주로 데이터 분석을 하는 batch 작업들이 많이 수행되므로
+batch_users 라는 컨서머 그룹을 생성하겠습니다.
+
+1. consumer group :  batch_users
+2. resource  plan :  nighttime
+3. resource  directive : batch_users 에 대해서 병렬작업을 제한 없이 수행되겠금 설정
+
+
+■  resourec  manager  구현
+
+a) SYSTEM user로 접속하여 consumer group  BATCH_USERS 를 생성한다
+
+SQL> conn system/oracle_4U
+
+SQL> exec dbms_resource_manager.create_pending_area();
+
+   -->  리소스 메니저를 구현하기 위한  영역을 설정하겠다. 
+
+-- 컨슈머 그룹 생성
+
+SQL> exec dbms_resource_manager.create_consumer_group('BATCH_USERS','Users for Batch');
+
+  ~> SYS_GROUP 과 OTHER_GROUP 은 이미 만들어져 있기 때문에 BATCH_USERS 만 
+      생성한다.
+       ↑                           ↑
+    sysdba 권한 유져들   리소스 사용에 대한 제한이 높은 유져들
+
+
+ *  db 에 만들어져있는  Consumer 그룹확인하는 명령어 
+
+ select    consumer_group 
+    from   dba_rsrc_consumer_groups
+    where   consumer_group  like  '%BATCH%';
+
+ - resource plan DAYTIME 을 다음과 같이 생성한 후 view를 통해 확인한다.
+ 
+
+    A. SYS_GROUP    : CPU_P1=100  <-- cpu 사용을 100% 사용하게 한다. 
+
+    B. BATCH_USERS : CPU_P2=70, MAX_IDEL_BLOCKER_TIME=30
+
+   - MAX_IDEL_BLOCKER_TIME  :  lock  wating time 을 30초로 제한하겠다.
+
+
+    C. OTHER_GROUPS : CPU_P2=30, PARALLEL_DEGREE_P1=4
+   
+-- 리소스 플랜 생성 (nighttime)
+
+SQL> begin
+ dbms_resource_manager.create_plan('NIGHTTIME','Plan for night');
+end;
+/
+
+PL/SQL procedure successfully completed.
+
+ -- 위에서 생성한 nighttime  plan 이 생성되었는지 확인하시오 !
+
+  select    plan
+     from dba_rsrc_plans; 
+
+-- 리소스 디렉티브 생성 (디렉티브 : 분배방법)
+
+-- 기존에 이미 있는 SYS_GROUP 은 CPU 를 1순위로 100% 사용하겠금 지시어 생성
+
+SQL> begin
+ dbms_resource_manager.create_plan_directive('NIGHTTIME', 'SYS_GROUP','1st Group Set',    cpu_p1=>100);
+     end;
+
+/
+
+PL/SQL procedure successfully completed.
+
+-- batch_users 그룹은 lock blocking time을 30초로 지정 , cpu 사용 우선순위 2번째 이고 70% 만 사용
+
+ begin
+dbms_resource_manager.create_plan_directive('NIGHTTIME', 'BATCH_USERS','2nd Group set', 
+cpu_p2=>70,max_idle_blocker_time=>30);
+  end;
+/
+
+-- other_groups 는 병렬도를 4로 지정 , cpu 사용율 우선순위가 2번째이고 30% 만 사용하겠금 설정
+
+begin
+ dbms_resource_manager.create_plan_directive('NIGHTTIME', 'OTHER_GROUPS','3rd Group', 
+cpu_p2=>30,parallel_degree_limit_p1=>4);
+end;
+/
+
+
+
+-- 검증 작업
+
+SQL> exec dbms_resource_manager.validate_pending_area();
+
+
+PL/SQL procedure successfully completed.
+
+
+-- 구현
+
+SQL> exec dbms_resource_manager.submit_pending_area();
+
+ 
+
+PL/SQL procedure successfully completed.
+
+ 
+
+-- 내가 어떻게 설정했는지 조회하는 방법
+
+SQL> select plan, group_or_subplan, cpu_p1, cpu_p2,  
+            parallel_degree_limit_p1 dop, max_idle_blocker_time block_t
+     from dba_rsrc_plan_directives
+     where   plan='DAYTIME'
+        order by 1,2;
+
+
+c) SCOTT user를 consumer group BATCH_USERS로 지정하고 
+   default consumer group으로 지정한다.
+
+
+SQL> exec dbms_resource_manager_privs.grant_switch_consumer_group('SCOTT', 'BATCH_USERS', true);
+
+PL/SQL procedure successfully completed.
+
+
+SQL>
+SQL> exec dbms_resource_manager.set_initial_consumer_group('SCOTT', 'BATCH_USERS');
+
+
+PL/SQL procedure successfully completed.
+
+ 
+SQL>  select username, initial_rsrc_consumer_group
+           from dba_users
+           where username='SCOTT';
+
+orcl(SYSTEM) > alter system set resource_manager_plan='nighttime';
+
+System altered.
+
+orcl(SYSTEM) > show parameter resource
+ 
+dba 가 출근해서 
+
+orcl(SYSTEM) > alter system set resource_manager_plan='daytime';
+
+dba 가 퇴근할 때 
+
+orcl(SYSTEM) > alter system set resource_manager_plan='nighttime';
+
+위의 작업을 자동화하는게 다음 단원의 내용입니다. 

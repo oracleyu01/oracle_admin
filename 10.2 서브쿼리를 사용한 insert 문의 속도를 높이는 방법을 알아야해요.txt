@@ -1,0 +1,83 @@
+
+▣ 10.2 서브쿼리를 사용한 insert 문의 속도를 높이는 방법을 알아야해요
+
+
+그림설명: https://cafe.daum.net/oracleoracle/So33/521
+
+설명:  high water mark 위에 데이터를 올리게 되면 빠르게 데이터를 입력할 수 있는데
+        데이터를 입력할 때 병렬로 데이터를 입력하게 되면 더 빠르게 데이터를 
+        입력할 수 있습니다. 
+
+■ 실습1. 병렬로 high water mark 위에 데이터 입력하기
+
+#1. orcl 쪽에 scott 유져로 접속합니다.
+connect scott/tiger
+
+#2. emp 테이블과 구조가 똑같은 emp_new2 라는 테이블을 생성합니다.
+
+create  table  emp_new2
+as
+  select   *
+    from  emp
+    where  1 = 2; 
+
+#3. emp 테이블의 데이터를 emp_new2 테이블에 병렬로 입력합니다. 
+
+alter  session  enable   parallel  dml;
+
+insert   /*+  parallel(emp_new2, 4) */ into  emp_new2
+ select  *
+   from  emp;
+
+select  * from emp_new2;
+
+ORA-12838: cannot read/modify an object after modifying it in parallel
+
+commit;
+
+select * from emp_new2;
+
+문제1.  sh 계정으로 접속해서 sales 테이블의 구조로 sales_new 테이블을 생성하고
+          sales 테이블을 sales_new 테이블에 입력하는데  direct  load  insert 방법으로
+          입력하시오 !  ( 병렬로 입력하시오 !)
+          병렬도는 최대 cpu_count * 2 만큼 줄 수 있습니다.
+
+ 정리:   high water mark 위에 입력을 하는 힌트 2가지 ?
+
+                   1. append  힌트 -->  하나의 프로세서가 insert 를 수행
+                   2. parallel  힌트 --> 여러개의 프로세서가 insert 를 수행 
+
+     insert  /*+  parallel(sales_new, 병렬도 )  */  into  sales_new
+     select  *
+        from  sales;
+
+ show parameter cpu_count   4*2= 8 까지 병렬도를 줄 수 있습니다. 
+ 
+  8개의 프로세서가 insert 를 수행합니다.  이렇게 크게 주는것은 dba 만 하고
+  다른 운영자들은 작게 주라고 권고하세요 ~ 
+
+  dba 가 운영자들이 병렬 힌트 사용을 자제하겠금 관리감독을 해야합니다. 
+
+  병렬 힌트를 사용하려면 오라클이 enterprise edition 이어야합니다. 
+
+   select  * from  v$version;
+
+  회사에서 병렬쿼리를 써도 되는지 옵션을 구입했는지 확인하고 사용해야합니다. 
+
+※ direct load  insert 의 특징 및 장단점(p17-30)  ocp 시험에 자주 출제
+
+ - 장점 : 속도가 빠르다
+ - 단점 :  낭비되는 저장공간이 생긴다.( 즉 저장공간이 더 많이 소요된다)
+          
+※ 더 빨리 insert 를 하기위해서 현업에서 사용하는 팁
+
+    alter  session  enable   parallel  dml;
+
+     insert  /*+  parallel(sales_new, 병렬도 )  */  into  sales_new
+     nologging
+     select  *
+        from  sales;
+
+ nologging 을 사용하면 더 빨리 데이터를 insert 할 수 있습니다.
+ insert 할 때 발생하는 로그 정보를 생성하지 않겠다는 뜻입니다. 
+ 나중에 db 장애가 났을 때 이 insert 문장을 복구 못합니다 

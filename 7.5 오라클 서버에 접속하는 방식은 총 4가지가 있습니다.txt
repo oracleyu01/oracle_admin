@@ -1,0 +1,31 @@
+
+
+▩ 7.5 오라클 서버에 접속하는 방식은 총 4가지가 있습니다
+
+1. 간단한 연결 방식
+
+ $sqlplus scott/tiger@192.168.19.60:1521/orcl.us.oracle.com
+
+2. 로컬 이름 지정 방식
+
+ $ sqlplus  scott/tiger@orcl_11g
+
+3. 디렉토리 이름 지정 방식 :   접속하고자하는 서버들의 4가지 정보를 알고 있는
+                                       디렉토리 서버를 사용하는 방식 
+
+
+4. 외부 이름 지정 방식  :  위의 디렉토리 이름 지정 서버가 오라클이 아니라 다른 벤더사의
+                                  제품인 경우
+
+점심시간문제.   easy connect 방식으로 리눅스 서버에 접속되게 하시오 !
+
+도스창에서 sqlplus scott/tiger@192.168.19.xx:1521/orcl.us.oracle.com
+
+     클라이언트     ------------------------------------------->  서버
+      sqlnet.ora 
+         ↓
+ 아래의 내용이 있어야합니다.
+
+SQLNET.AUTHENTICATION_SERVICES= (NTS)
+
+NAMES.DIRECTORY_PATH= (TNSNAMES,EZCONNECT)

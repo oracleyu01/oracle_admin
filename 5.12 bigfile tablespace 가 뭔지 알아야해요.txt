@@ -1,0 +1,39 @@
+▣ 5.12 bigfile tablespace 가 뭔지 알아야해요: 
+
+* 테이블 스페이스 파일의 종류에 따라 2가지로 분류됨 
+
+ 1. bigfile  tablespace  : 하나의 테이블 스페이스에 하나의 데이터 파일만 
+                                저장할 수 있고 하나의 파일의 크기를 최대 128 테라 바이트
+                                까지 생성할 수 있습니다.
+
+ 2. small file  tablespace : 하나의 테이블 스페이스에 여러개의 데이터 파일들을
+                                  저장할 수 있는 테이블 스페이스
+
+■ 실습:
+# 1. 지금까지 만든 테이블 스페이스가 bigfile tablespace 인지 small file tablespace
+      인지 확인하시오 !
+
+select  tablespace_name, bigfile
+   from  dba_tablespaces; 
+
+#2. bigfile tablespace 생성하기
+
+create  bigfile  tablespace  bigts01
+   datafile  '/home/oracle/bigts01.dbf'  size 10m;
+
+select  tablespace_name, bigfile
+   from  dba_tablespaces; 
+
+문제1.  bigfile 테이블 스페이스에는 하나의 데이터 파일만 생성할 수 있습니다.
+          정말로 그런지 bigts01 테이블 스페이스에 data file 을 추가해보세요.
+
+ alter  tablespace  bigts01
+  add  datafile  '/home/oracle/bigts01b.dbf' size  10m;
+
+ORA-32771: cannot add file to bigfile tablespace
+
+big file 테이블 스페이스는 1개의 data file 만 담을 수 있습니다. 
+
+문제2.  bigts01 테이블 스페이스를 drop 하시오 !
+
+drop tablespace  bigts01  including contents  and  datafiles ;

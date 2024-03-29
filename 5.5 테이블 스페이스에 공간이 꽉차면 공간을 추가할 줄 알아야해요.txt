@@ -1,0 +1,111 @@
+▩ 5.5 테이블 스페이스에 공간이 꽉차면 공간을 추가할 줄 알아야해요
+
+ 공간을 추가하는 방법 2가지 ?
+
+   1.  데이터 파일 추가
+ 
+    alter   tablespace   example
+      add   datafile  '/u01/app/oracle/oradata/PROD/disk1/example02.dbf'  size 10m;
+
+   2.  기존 데이터 파일의 사이즈를 늘리기 
+
+    @tablespace
+
+     alter   database  datafile 
+           '/u01/app/oracle/oradata/PROD/disk1/example01.dbf'  resize  200m;
+
+ 원래 100m 였는데 200m 로 늘어났습다. 
+
+
+■ 실습.
+
+#1.  test100 이라는 테이블 스페이스를 사이즈 10m 로 만드시오 !
+
+create   tablespace   test100
+    datafile  '/u01/app/oracle/oradata/PROD/disk1/test100a.dbf'  size  10m;
+
+#2. test100 테이블 스페이스의 공간을 확인하시오 !
+
+PROD> ed space.sql
+
+col  "Tablespace Name"  for  a10
+
+SELECT 
+    total_space.tablespace_name AS "Tablespace Name",
+    ROUND(SUM(total_space.bytes) / 1024 / 1024, 2) AS "Total Space (MB)",
+    ROUND(SUM(total_space.bytes - NVL(free_space.free_bytes, 0)) / 1024 / 1024, 2) AS "Used Space (MB)",
+    ROUND(NVL(SUM(free_space.free_bytes), SUM(total_space.bytes)) / 1024 / 1024, 2) AS "Free Space (MB)"
+FROM
+    (
+        SELECT 
+            tablespace_name,
+            SUM(bytes) AS bytes
+        FROM 
+            dba_data_files
+        GROUP BY 
+            tablespace_name
+        UNION ALL
+        SELECT 
+            tablespace_name,
+            SUM(bytes) AS bytes
+        FROM 
+            dba_temp_files
+        GROUP BY 
+            tablespace_name
+    ) total_space
+LEFT JOIN
+    (
+        SELECT 
+            tablespace_name,
+            SUM(bytes) AS free_bytes
+        FROM 
+            dba_free_space
+        GROUP BY 
+            tablespace_name
+    ) free_space
+ON
+    total_space.tablespace_name = free_space.tablespace_name
+GROUP BY 
+    total_space.tablespace_name;
+
+PROD> @space.sql
+
+#3.   scott 유져에서 test100 테이블 스페이스에 emp 테이블과 똑같은
+        emp100 테이블을 생성하시오!
+
+PROD> connect scott/tiger
+
+PROD> create  table emp100
+       tablespace  test100
+     as
+      select *
+       from emp;
+
+#4.  emp100 테이블에 emp100 테이블을 반복해서 입력해서 테이블 스페이스를 공간이
+      꽉차게 하시오 !
+
+PROD> insert  into  emp100
+             select  *
+               from emp100;
+
+PROD>  / 
+insert into emp100
+*
+ERROR at line 1:
+ORA-01653: unable to extend table SCOTT.EMP100 by 128 in tablespace TEST100
+
+PROD> @space
+
+#5.  test100 테이블 스페이스의 공간을 10m 더 늘리시오 !
+
+PROD> @tablespace
+
+PROD> alter  tablespace   test100
+            add   datafile  '/u01/app/oracle/oradata/PROD/disk1/test100b.dbf' size 10m;
+
+PROD> @space
+
+점심시간 문제.  다시 test100 테이블 스페이스의 공간을 데이터로 꽉차게하고
+                     다시 10m 더 늘리시오 !
+
+ @space <----  보여주시고 식사하러 가시면 됩니다.  라인 검사 입니다. 

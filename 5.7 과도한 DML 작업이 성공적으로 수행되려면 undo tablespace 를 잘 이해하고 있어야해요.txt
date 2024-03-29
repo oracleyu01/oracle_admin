@@ -1,0 +1,65 @@
+▩ 5.7 과도한 DML 작업이 성공적으로 수행되려면 undo tablespace 를 잘 이해하고 있어야해요
+
+  UNDO  ~  취소하다 
+
+  UNDO DATA 는 취소를 하기 위해 필요한 데이터 , 롤백을 위해 필요한 데이터
+
+  delete  from  emp; 
+
+  ※ undo  data 를 발생시키는 SQL ?    1.   delete 
+           (취소할 수 있는 SQL)             2.   update 
+                                                   3.   insert 
+                                                   4.   merge 
+
+  create, drop, truncate, rename  <-- 취소 못하는 SQL 
+
+■ 실습
+
+#1.  database 에서 사용하는 기본 undo  tablespace 가 무엇인지 확인합니다.
+
+PROD>  show  parameter  undo_tablespace 
+PROD> @contents.sql
+
+#2. undotbs2 라는 이름으로 undo tablespace 를 생성하시오 !
+
+PROD> create   undo  tablespace  undotbs2
+            datafile  '/home/oracle/undotbs2.dbf'  size  2m;
+
+PROD> @contents.sql
+
+#3. undotbs2 를 기본 undo tablespace 로 지정하시오 !
+
+PROD> alter  system  set  undo_tablespace='UNDOTBS2'  scope=both;
+
+PROD> show parameter undo_tablespace
+
+#4. 과도한 dml 작업을 일으켜서 실패하는지 확인해보시오
+
+PROD> delete from orders;
+delete from orders
+            *
+ERROR at line 1:
+ORA-30036: unable to extend segment by 8 in undo tablespace 'UNDOTBS2'
+
+#5. undotbs2  undo tablespace 에 공간을 추가해서 위의 상황을 해결하시오 !
+
+PROD> @tablespace
+
+UNDOTBS2   AVAILABLE /home/oracle/undotbs2.dbf
+
+PROD> alter  database  datafile  '/home/oracle/undotbs2.dbf'  resize  100m;
+
+PROD> show user
+USER is "SCOTT"
+PROD>
+PROD> delete from orders;
+
+문제1. 기본 undo tablespace 를 다시 undotbs 로 돌려놓고 undotbs2  는 drop 하시오 !
+
+alter  system  set  undo_tablespace='UNDOTBS'  scope=both;
+
+show  parameter undo_tablespace
+
+drop   tablespace  undotbs2  including  contents and datafiles;
+
+@contents

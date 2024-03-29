@@ -1,0 +1,88 @@
+
+▩ 7.6 오라클에 접속 안될때 확인하는 방법 3가지를 알고 있어야해요
+
+ 첫번째.  오라클 리스너 상태가 정상인지 확인합니다.
+
+  $ lsnrctl  status 
+  $  ps -ef  | grep  LISTEN*  | grep -v  grep
+
+ 두번째. 클라이언트 쪽의 tnsnames.ora 를 잘 작성했는지 확인합니다.
+
+저같은 경우 :
+C:\Users\ITWILL\Downloads\instantclient-basic-nt-19.21.0.0.0dbru\instantclient_19_21\network\admin
+ 
+C:\Users\ITWILL>tnsping orcl_11g
+
+(DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.19.60)(PORT =1521)) (CONNECT_DATA = (SERVER = DEDICATED) (SERVICE_NAME = orcl.us.oracle.com)))에 접속하려고 시도하는 중 
+확인(0밀리초)
+
+세번째.  ping 을 수행해서 네트워크 연결이 잘되었는지 확인 합니다.
+
+C:\Users\ITWILL> ping 192.168.19.60
+
+ping 이 안나가면 서버실 가서 랜선이 빠졌는지 확인해봅니다.
+
+문제1.  어제 마지막 문제의 테스트를 수행하기 위해서 짝꿍 서버로 ping 이 나가는지
+          확인해봅니다.
+
+C:\Users\ITWILL>ping 192.168.19.199
+
+Ping 192.168.19.199 32바이트 데이터 사용:
+192.168.19.199의 응답: 바이트=32 시간=1ms TTL=64
+192.168.19.199의 응답: 바이트=32 시간=1ms TTL=64
+192.168.19.199의 응답: 바이트=32 시간=1ms TTL=64
+192.168.19.199의 응답: 바이트=32 시간=1ms TTL=64
+
+192.168.19.199에 대한 Ping 통계:
+    패킷: 보냄 = 4, 받음 = 4, 손실 = 0 (0% 손실),
+
+문제2.  짝꿍 서버로 tnsping 이 나가는지 확인하시오 !
+
+나의 윈도우쪽의 tnsnames.ora 를 열어서 아래와 같이 짝꿍 영문이름으로 생성합니다.
+
+ooh_11g =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.19.199)(PORT =1521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = orcl.us.oracle.com )
+    )
+  )
+
+C:\Users\ITWILL> tnsping ooh_11g
+
+별칭 분석을 위해 TNSNAMES 어댑터 사용
+(DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.19.199)(PORT =1521)) (CONNECT_DATA = (SERVER = DEDICATED) (SERVICE_NAME = orcl.us.oracle.com)))에 접속하려고 시도하는 중
+확인(0밀리초)
+
+문제3. 짝꿍의 tns 별칭을 이용해서  scott 유져로 접속합니다.
+
+C:\Users\ITWILL>sqlplus scott/tiger@ooh_11g
+
+SQL> exit;
+
+문제4. 내 리눅스 서버에서 짝꿍이 접속할 수 있도록 sqlnet.ora 를 구성하고 
+         짝꿍이 아닌 다른 아이피가 접속이 안되게 하시오 !
+
+tcp.validnode_checking=yes
+tcp.invited_nodes=(192.168.19.60,192.168.19.20,192.168.19.2,192.168.19.14)
+
+저장하고 나와서 리눅스의 리스너를 내렸다 올립니다. 
+
+C:\Users\ITWILL>sqlplus scott/tiger@ooh_11g
+
+문제5. 그럼 짝꿍이 아닌 다른 오라클 서버로 접속해봅니다.
+         수진이의 리눅스 서버로 scot 유져로 접속해봅니다.
+
+내 윈도우의 tnsnames.ora 에 맨 마지막에 아래의 내용을 넣고 저장합니다.
+
+jsj_11g =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.19.93)(PORT =1521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = orcl.us.oracle.com )
+    )
+  )
+
+C:\Users\ITWILL>sqlplus scott/tiger@jsj_11g

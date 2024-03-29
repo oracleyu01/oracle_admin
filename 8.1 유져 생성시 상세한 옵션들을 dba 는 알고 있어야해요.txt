@@ -1,0 +1,52 @@
+▣ 8.1 유져 생성시 상세한 옵션들을 dba 는 알고 있어야해요
+
+SQL 시간에 배웠던 유져 생성방법
+
+create  user   smith2
+  identified  by  tiger;
+
+오라클 관리 수업 때의 유져 생성방법
+
+create  tablespace   test5000
+  datafile  '/home/oracle/test5000.dbf'  size  10m;
+
+create  user   scott2
+   identified by   tiger
+   default  tablespace  test5000
+   temporary   tablespace  temp3
+   profile  default
+   account  lock; 
+
+접속할 수 있는 권한을 부여합니다.
+
+grant  connect  to  scott2;
+
+connect / as sysdba
+
+show  user
+
+alter   user  scott2  
+ account  unlock;
+
+connect  scott2/tiger 
+
+문제1.   ts7000 이라는 테이블 스페이스를 사이즈 10m 로 생성하고 
+           ts7000 테이블 스페이스를 default tablespace 로 하는 유져를 생성하는데
+           유져명은 king2 라고 하고 잠금을 해제하면서 생성하시오 ! 
+
+답:      create  tablespace  ts7000
+           datafile  '/home/oracle/ts7000.dbf'  size 10m;
+
+           create  user   king2
+            identified  by  tiger
+            default  tablespace   ts7000
+            temporary  tablespace  temp3
+            profile  default 
+            account  unlock;
+
+           grant  connect  to  king2;
+
+문제2.  다시 sys로 접속해서 db 에 만들어진 유져들을 확인하시오 !
+
+ select  username, account_status
+   from  dba_users;

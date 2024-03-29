@@ -1,0 +1,25 @@
+▩ 7.3 오라클 네트워크를 다루는 관리 도구가 4가지가 있습니다
+
+그림 캡쳐:  p6-8
+
+그림 설명: 위의 4가지 도구를  이용하면 리스너를 내리거나 올릴 수 있습니다.
+               listener.ora 파일을 생성해서 새로운 리스너를 만들 수 있습니다.
+               tnsnames.ora 에 새로운 tns별칭도 넣을 수 있습니다.
+
+ 툴을 사용하기 보다는 직접  vi 편집기 명령어로 listener.ora 와 tnsnames.ora 를 구성을 하고
+ 명령어로 관리하는게 많이 쓰는 방법입니다.
+
+■ 실습1.  네트워크 툴 사용법 실습 
+
+#1. 나의 tnsnames.ora 의 위치가 어딘지 확인하시오 !
+
+ ① 명령 프롬프트 창을 열고 path 라고 치고 확인
+ ② 환경변수 설정에  TNS_ADMIN 환경변수가 셋팅 경로 확인 
+
+여러분의 tnsnames.ora 가  어느 위치에 있는지 찾으시오 ~~     
+
+#2. 윈도우의 오라클 network 프로그램을 이용해서 tnsnames.ora 를 구성해봅니다.
+
+D:\oracle19c\WINDOWS.X64_193000_db_home\network\admin
+
+ tnsnames.ora

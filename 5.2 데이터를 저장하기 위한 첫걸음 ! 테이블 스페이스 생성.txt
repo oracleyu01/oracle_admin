@@ -1,0 +1,108 @@
+▣  5.2 데이터를 저장하기 위한 첫걸음 ! 테이블 스페이스 생성
+
+
+
+문제1.  다음과 같이 test01 이라는 테이블 스페이스를 생성합니다.
+
+ create   tablespace   test01  
+   datafile  '+data'  size 10m;
+
+문제2. test01 테이블 스페이스에 emp01 이라는 테이블을 생성합니다. 
+
+SQL> connect scott/tiger
+
+SQL>  create  table  emp01
+         (  empno    number(10),
+            ename    varchar2(20),
+             sal       number(10) )
+          tablespace  test01;
+
+문제3.  emp01 테이블에 데이터를 입력하는데 데이터를 계속 누적해서 입력해서 
+          공간부족으로 에러가 날때까지 입력하시오!
+
+SQL> insert  into  emp01  values( 1111, 'aaa', 3000);
+
+SQL> insert  into  emp01
+        select  *
+         from  emp01;
+
+SQL>   /    엔터 
+
+ORA-01653: unable to extend table SCOTT.EMP01 by 128 in tablespace TEST01
+
+문제4.  위의 상황이 발생했습니다.  dba인 여러분들이 위의 상황을 해결하세요 !
+
+ #1.  dba.sh 쉘을 돌려서 alert  log file 에 어떤 이슈가 있는지 확인합니다.
+
+ #2. dba.sh 쉘에서 4번을 눌러서 테이블 스페이스 공간을 확인합니다. 
+ 
+ #3. 조치를 수행합니다.
+
+문제5. test01 테이블 스페이스의 공간을 10m  더 늘리시오 !
+
+SYS> alter  tablespace   test01   
+          add  datafile  '+data'  size   10m;
+
+SQL> connect scott/tiger
+Connected.
+
+SQL> insert into emp01 values(1111,'aaa',3000);
+
+1 row created.
+
+※ dba 관리자의 일중에 하나 !  
+
+ 1. tablespace 의 공간이 꽉찼을때 해결하는 일  
+
+문제6. test02 라는 테이블 스페이스를 사이즈 5m 로 해서 생성하고
+         test02 테이블 스페이스에 dept02 테이블을 dept 테이블과 똑같은 구조로
+         생성하시오 !
+
+SYS> create   tablespace  test02
+          datafile   '+data'   size  5m; 
+
+SYS> connect scott/tiger
+Connected.
+SCOTT>
+SCOTT> desc dept
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ DEPTNO                                             NUMBER(10)
+ DNAME                                              VARCHAR2(14)
+  LOC                                                VARCHAR2(13)
+
+SCOTT> create  table  dept02
+          ( deptno      number(10),
+            dname       varchar2(14),
+            loc            varchar2(13) )
+          tablespace  test02;
+
+SCOTT> drop  table  dept02  purge;
+
+SCOTT> create  table  dept02
+           tablespace   test02
+           as
+             select  *
+               from dept
+               where  1 = 2; 
+
+문제7 (dba에게 유용한 스크립트 생성하기)   ASM 디스크 사용량이 어떻게 되는지
+         조회하고 스크립트를 asm.sql 로 저장하시오 !
+
+SELECT GROUP_NUMBER, NAME, STATE, TOTAL_MB, FREE_MB FROM V$ASM_DISKGROUP;
+
+※  지금 만든 필수 스크립트:   @datafile.sql
+                                       @tablespace.sql
+                                       @i.sql
+                                       @asm.sql 
+
+문제8. (dba에게 유용한 스크립트)  오라클 접속할 때 앞에 SQL> 아니라 유져명이 되게하시오!
+
+ SQL> ---------->  SCOTT> 
+
+$ cd $ORACLE_HOME/sqlplus/admin
+$ vi  glogin.sql
+
+define _editor='vi'
+set sqlprompt "_user > "
+

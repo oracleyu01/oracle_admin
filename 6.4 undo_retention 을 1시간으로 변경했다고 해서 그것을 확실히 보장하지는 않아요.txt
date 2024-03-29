@@ -1,0 +1,39 @@
+
+▣ 6.4 undo_retention 을 1시간으로 변경했다고 해서 그것을 확실히 보장하지는 않아요:
+
+p 10-11 
+
+   기본값은 보장하지 않습니다.  보장하겠금 다음과 같은 명령어를 수행해야합니다. 
+
+■ 실습
+
+1.  현재 사용중인 undo tablespace 이름을 확인합니다.
+
+ show   parameter   undo_tablespace
+
+2.  현재 사용중인  undo tablespace 가 현재 설정된 undo retention 을 보장하겠금 
+    설정합니다. 
+
+ select  tablespace_name, retention  from  dba_tablespace;
+
+ alter   tablespace  undotbs   retention  guarantee;
+
+ select  tablespace_name, retention  from  dba_tablespace;
+
+문제1.  undotbs7 을 사이즈 50m 로 생성하고  undotbs7을  현재 사용할 undo tablespace
+          로 지정한후  undo retention 에 나온데로 시간을 보장할 수 있도록 guarantee 
+          하게 하시오 !
+
+create   undo   tablespace   undotbs7
+   datafile  '/home/oracle/undotbs7.dbf'   size  50m;
+
+alter  system  set undo_tablespace=undotbs7  scope=both;
+
+alter   tablespace  undotbs7   retention  guarantee;
+
+※ 쿠팡 처럼 지금 실시간으로 주문이 들어오는 insert 문이나 update 문이 실패하지
+   않게 하려면 위와 같이 gurantee 하면 안됩니다. 
+
+  그럼 언제 guarantee 를 해야하는가 ?  
+
+          select 문장 실행시 ora-01555  snap shot too old 에러가 안나는게 중요한 경우 
