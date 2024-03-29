@@ -1,4 +1,4 @@
-▩ 리두로그 버퍼(redo log buffer) 가 왜 필요한지 알아야해요.
+▩ 1.5 리두로그 버퍼(redo log buffer) 가 왜 필요한지 알아야해요.
 
  update  emp
    set  sal = 0
