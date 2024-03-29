@@ -1,5 +1,5 @@
 
-▩ 데이터베이스 버퍼 캐쉬(database buffer cache) 가 왜 필요한지 알아야해요.
+▩ 1.4 데이터베이스 버퍼 캐쉬(database buffer cache) 가 왜 필요한지 알아야해요.
 
 다음과 같이 SQL문을 실행했다고 해볼께요.
 
