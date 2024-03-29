@@ -189,7 +189,7 @@
 
 &nbsp;  
 
-위의 수업 내용은 곧 [이지업 클래스](https://easyupclass.e-itwill.com/main/index.jsp) 온라인 강의에서 만나시게됩니다.
+위의 수업 내용은  [이지업 클래스](https://easyupclass.e-itwill.com/main/index.jsp) 온라인 강의에서 곧 만나시게 되실수 있습니다.
 
 &nbsp;  
 
