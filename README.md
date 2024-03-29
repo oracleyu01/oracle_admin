@@ -34,7 +34,7 @@
 
 - 1.6 **PGA 메모리 영역이 왜 필요한지 알아야해요.**: [📄  [노트](https://github.com/oracleyu01/oracle_admin/edit/main/1.6%20%20PGA%20%EB%A9%94%EB%AA%A8%EB%A6%AC%20%EC%98%81%EC%97%AD.txt)]
 
-- 1.7 **DBWn 프로세서의 역할을 알아야해요.**: [📄 [노트(https://github.com/oracleyu01/oracle_admin/blob/main/1.7%20DBWn%20%ED%94%84%EB%A1%9C%EC%84%B8%EC%84%9C(%20%EB%8D%B0%EC%9D%B4%ED%84%B0%EB%B2%A0%EC%9D%B4%EC%8A%A4%20%EA%B8%B0%EB%A1%9D%EC%9E%90%20%ED%94%84%EB%A1%9C%EC%84%B8%EC%84%9C.txt)]
+- 1.7 **DBWn 프로세서의 역할을 알아야해요.**: [📄 [노트](https://github.com/oracleyu01/oracle_admin/blob/main/1.7%20DBWn%20%ED%94%84%EB%A1%9C%EC%84%B8%EC%84%9C(%20%EB%8D%B0%EC%9D%B4%ED%84%B0%EB%B2%A0%EC%9D%B4%EC%8A%A4%20%EA%B8%B0%EB%A1%9D%EC%9E%90%20%ED%94%84%EB%A1%9C%EC%84%B8%EC%84%9C.txt)]
 
 - 1.8 **LGWR (log writer)의 역할을 알아야해요.**: [📄  [노트](https://github.com/oracleyu01/oracle_admin/blob/main/1.8.%20LGWR%20%EC%9D%98%20%EC%97%AD%ED%99%9C%EC%9D%84%20%EC%95%8C%EC%95%84%EC%95%A0%ED%95%B4%EC%9A%94.txt)]
 
