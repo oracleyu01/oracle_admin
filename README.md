@@ -14,8 +14,6 @@
 
 아래의 내용을 순서데로 보시면 됩니다.
 
-아래의 수업 내용은 곧 [이지업 클래스](https://easyupclass.e-itwill.com/main/index.jsp) 온라인 강의에서 만나시게됩니다.
-
 ## 수업 자료 ( ☀️ 2024년 3월 29일 updated)
 
 
