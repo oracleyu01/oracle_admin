@@ -16,7 +16,7 @@
 
 아래의 수업 내용은 곧 [이지업 클래스](https://easyupclass.e-itwill.com/main/index.jsp) 온라인 강의에서 만나시게됩니다.
 
-## 수업 자료 ( ☀️ 2024년 3월 22일 updated)
+## 수업 자료 ( ☀️ 2024년 3월 29일 updated)
 
 
 ### 1. **오라클 구조**
