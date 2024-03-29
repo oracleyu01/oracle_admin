@@ -1,4 +1,4 @@
-▩ 공유풀(shared pool)이 왜 필요한지 알아야해요.
+▩ 1.3 공유풀(shared pool)이 왜 필요한지 알아야해요.
 
  질문:  shared pool 의 역활이 무엇인가요 ?
 
