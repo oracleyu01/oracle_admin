@@ -22,7 +22,7 @@
 - 1.1 **오라클 데이터 베이스 서버 구조를 알아야해요.**: [📄 [노트](https://github.com/oracleyu01/oracle_admin/blob/main/1.1%20%EC%98%A4%EB%9D%BC%ED%81%B4%20%EB%8D%B0%EC%9D%B4%ED%84%B0%20%EB%B2%A0%EC%9D%B4%EC%8A%A4%20%EC%84%9C%EB%B2%84%EC%9D%98%20%EA%B5%AC%EC%A1%B0%EB%A5%BC%20%EC%95%8C%EC%95%84%EC%95%BC%ED%95%B4%EC%9A%94.md)] 
 - 1.2 **오라클 데이터베이스 메모리 구조를 알아야해요.**: [📄 [노트](https://github.com/oracleyu01/oracle_admin/blob/main/1.2%20%EC%98%A4%EB%9D%BC%ED%81%B4%20%EB%8D%B0%EC%9D%B4%ED%84%B0%EB%B2%A0%EC%9D%B4%EC%8A%A4%20%EB%A9%94%EB%AA%A8%EB%A6%AC%20%EA%B5%AC%EC%A1%B0%EB%A5%BC%20%EC%95%8C%EC%95%84%EC%95%BC%ED%95%B4%EC%9A%94..txt)]
 
-- 1.3 **공유풀(shared pool)이 왜 필요한지 알아야해요.**: [📄 [노트](https://github.com/oracleyu01/oracle_admin/blob/main/%EA%B3%B5%EC%9C%A0%ED%92%80(shared%20pool)%EC%9D%B4%20%EC%99%9C%20%ED%95%84%EC%9A%94%ED%95%9C%EC%A7%80%20%EC%95%8C%EC%95%84%EC%95%BC%ED%95%B4%EC%9A%94..txt)]
+- 1.3 **공유풀(shared pool)이 왜 필요한지 알아야해요.**: [📄 [노트](https://github.com/oracleyu01/oracle_admin/blob/main/1.3%20%EA%B3%B5%EC%9C%A0%ED%92%80(shared%20pool)%EC%9D%B4%20%EC%99%9C%20%ED%95%84%EC%9A%94%ED%95%9C%EC%A7%80%20%EC%95%8C%EC%95%84%EC%95%BC%ED%95%B4%EC%9A%94..txt)]
 
 - 1.4 **데이터베이스 버퍼 캐쉬(database buffer cache) 가 왜 필요한지 알아야해요.**: [📄 [노트](https://github.com/oracleyu01/oracle_admin/blob/main/%EB%8D%B0%EC%9D%B4%ED%84%B0%EB%B2%A0%EC%9D%B4%EC%8A%A4%20%EB%B2%84%ED%8D%BC%20%EC%BA%90%EC%89%AC(database%20buffer%20cache)%20%EA%B0%80%20%EC%99%9C%20%ED%95%84%EC%9A%94%ED%95%9C%EC%A7%80%20%EC%95%8C%EC%95%84%EC%95%BC%ED%95%B4%EC%9A%94.txt)]
 
